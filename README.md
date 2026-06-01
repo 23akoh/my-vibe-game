@@ -1,1 +1,1 @@
-# my-vibe-game
+# Écarté.ai

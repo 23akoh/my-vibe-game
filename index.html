@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Écarté.ai</title>
+  <title>Écarté.ai | Full Studio</title>
   
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50,45 C35,20 15,30 25,50 C35,65 45,52 50,45 Z' fill='%231a1a1a'/><path d='M50,45 C65,20 85,30 75,50 C65,65 55,52 50,45 Z' fill='%231a1a1a'/><circle cx='50' cy='45' r='7' fill='%231a1a1a'/><path d='M46,48 C35,60 20,80 25,85 C28,87 40,70 48,52' fill='%231a1a1a'/><path d='M54,48 C65,60 80,80 75,85 C72,87 60,70 52,52' fill='%231a1a1a'/></svg>">
   
@@ -12,7 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
   <style>
-    /* --- LILAC AESTHETIC THEME --- */
     body {
       background-color: #E6E6FA; 
       background-image: radial-gradient(circle at center, #F8F8FF 0%, #E6E6FA 100%);
@@ -27,30 +26,9 @@
       min-height: 100vh;
     }
 
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      opacity: 0.02;
-      background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><path d="M50 10 Q60 40 80 50 Q60 60 50 90 Q40 60 20 50 Q40 40 50 10 Z" fill="none" stroke="black" stroke-width="2"/></svg>');
-      pointer-events: none;
-      z-index: -1;
-    }
+    .header { margin-bottom: 25px; }
+    .logo { width: 160px; border-radius: 12px; mix-blend-mode: multiply; }
 
-    .header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 25px;
-    }
-
-    .logo {
-      width: 160px;
-      border-radius: 12px;
-      mix-blend-mode: multiply; 
-    }
-
-    /* --- PAGE CONTAINERS --- */
     .page {
       background: #ffffff;
       padding: 30px;
@@ -61,134 +39,30 @@
     }
 
     #setup-page { display: flex; flex-direction: column; }
-    #profile-page { display: none; }
-    #tracker-page { display: none; width: auto; background: transparent; box-shadow: none; align-items: flex-start; gap: 20px; }
-    #summary-page { display: none; flex-direction: column; }
+    #profile-page, #tracker-page, #summary-page { display: none; }
+    #tracker-page { width: auto; background: transparent; box-shadow: none; align-items: flex-start; gap: 20px; }
 
-    /* --- INPUTS & BUTTONS --- */
-    label {
-      font-weight: bold;
-      color: #666;
-      font-size: 0.9em;
-      margin-top: 12px;
-      display: block;
-    }
+    label { font-weight: bold; color: #666; font-size: 0.9em; margin-top: 12px; display: block; }
+    input[type="text"], select { width: 90%; padding: 11px; margin: 6px 0 16px 0; border: 1px solid #dcdcdc; border-radius: 10px; background-color: #fafafa; }
 
-    input[type="text"], select {
-      width: 90%;
-      padding: 11px;
-      margin: 6px 0 16px 0;
-      border: 1px solid #dcdcdc;
-      border-radius: 10px;
-      font-family: inherit;
-      background-color: #fafafa;
-    }
-
-    .btn-group {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-    }
-
-    button {
-      background-color: #1a1a1a; 
-      color: white;
-      border: none;
-      padding: 14px 28px;
-      font-size: 1.1em;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-
-    button.secondary {
-      background-color: #E6E6FA;
-      color: #333;
-      border: 1px solid #ccc;
-    }
-
+    .btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
+    button { background-color: #1a1a1a; color: white; border: none; padding: 14px 28px; font-size: 1.1em; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    button.secondary { background-color: #E6E6FA; color: #333; border: 1px solid #ccc; }
     button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-    /* --- TRACKER APP --- */
-    .tracker-container {
-      position: relative;
-      border: 8px solid #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0, 0.1);
-      overflow: hidden;
-      background-color: #000;
-      width: 640px;
-      height: 480px;
-    }
+    .tracker-container { position: relative; border: 8px solid #ffffff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0, 0.1); overflow: hidden; background-color: #000; width: 640px; height: 480px; }
+    .input_video, .output_canvas { width: 100%; height: 100%; transform: scaleX(-1); }
+    .output_canvas { position: absolute; top: 0; left: 0; }
 
-    .input_video, .output_canvas {
-      width: 100%;
-      height: 100%;
-      transform: scaleX(-1); 
-    }
-
-    .output_canvas {
-      position: absolute;
-      top: 0; left: 0;
-    }
-
-    .feedback-panel {
-      width: 320px;
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0, 0.1);
-      text-align: left;
-    }
-
-    .status-badge {
-      display: inline-block;
-      background: #E6E6FA;
-      color: #333;
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 0.9em;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .feedback-text {
-      font-size: 1em;
-      line-height: 1.4;
-      color: #555;
-      min-height: 60px;
-    }
+    .feedback-panel { width: 340px; background: #ffffff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0, 0.1); text-align: left; }
+    .status-badge { display: inline-block; background: #E6E6FA; color: #333; padding: 5px 10px; border-radius: 15px; font-size: 0.9em; font-weight: bold; margin-bottom: 10px; }
+    .feedback-text { font-size: 1em; line-height: 1.4; color: #555; min-height: 60px; font-weight: bold; }
     
-    .arm-feedback {
-      margin-top: 10px;
-      padding: 10px;
-      background: #fafafa;
-      border-left: 3px solid #ff4d4d; 
-      font-size: 0.9em;
-    }
-
-    /* --- SUMMARY UI STYLING --- */
-    .summary-block {
-      margin-bottom: 15px;
-      padding: 12px;
-      background: #fafafa;
-      border-radius: 10px;
-      border-left: 4px solid #1a1a1a;
-    }
-
-    .summary-block h3 {
-      margin: 0 0 5px 0;
-      font-size: 1.05em;
-      color: #222;
-    }
-
-    .summary-block ul {
-      margin: 0;
-      padding-left: 20px;
-      color: #555;
-      font-size: 0.95em;
-    }
+    .arm-feedback { margin-top: 10px; padding: 10px; background: #fafafa; border-left: 3px solid #ff4d4d; font-size: 0.9em; line-height: 1.4; }
+    
+    .summary-block { margin-bottom: 15px; padding: 12px; background: #fafafa; border-radius: 10px; border-left: 4px solid #1a1a1a; }
+    .summary-block h3 { margin: 0 0 5px 0; font-size: 1.05em; color: #222; }
+    .summary-block ul { margin: 0; padding-left: 20px; color: #555; font-size: 0.95em; }
   </style>
 </head>
 <body>
@@ -199,29 +73,13 @@
 
   <div id="setup-page" class="page">
     <h2>Welcome to the Studio</h2>
-    
-    <label>Name</label>
-    <input type="text" id="userName" placeholder="Your Name">
-
+    <label>Name</label><input type="text" id="userName" placeholder="Your Name">
     <label>Method / School</label>
     <select id="danceMethod">
       <option value="Vaganova">Vaganova</option>
-      <option value="Cecchetti">Cecchetti</option>
-      <option value="Royal Academy of Dance (RAD)">Royal Academy of Dance (RAD)</option>
       <option value="Balanchine">Balanchine</option>
-      <option value="French School">French School</option>
-      <option value="Bournonville">Bournonville</option>
+      <option value="RAD">RAD</option>
     </select>
-
-    <label>Camera Focus Area</label>
-    <select id="cameraFocus">
-      <option value="full" selected>Full Body (Arms & Lower Leg Positions)</option>
-      <option value="upper">Upper Body Only</option>
-    </select>
-
-    <label>Your Focus / Goals</label>
-    <input type="text" id="userGoals" placeholder="E.g. Clear turnout, clean fifth, accurate B+...">
-    
     <div class="btn-group" style="justify-content: flex-end;">
       <button type="button" onclick="goToProfile()">Next ➔</button>
     </div>
@@ -231,10 +89,7 @@
     <h2>Dancer Dashboard</h2>
     <p><strong>Name:</strong> <span id="display-name"></span></p>
     <p><strong>Method:</strong> <span id="display-method"></span></p>
-    <p><strong>Tracking Focus:</strong> <span id="display-focus"></span></p>
-    <p><strong>Goals:</strong> <span id="display-goals"></span></p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-    
     <div class="btn-group">
       <button type="button" class="secondary" onclick="goToSetup()">Back</button>
       <button type="button" onclick="goToTracker()">Next ➔ Enter Studio</button>
@@ -246,13 +101,11 @@
       <video class="input_video" autoplay playsinline style="display:none;"></video>
       <canvas class="output_canvas" width="640" height="480"></canvas>
     </div>
-
     <div class="feedback-panel">
       <h2>Live Feedback</h2>
       <div class="status-badge" id="detectedPosition">Detecting...</div>
-      <div class="feedback-text" id="feedback">Initializing camera mirror...</div>
-      <div class="arm-feedback" id="armFeedback">Tracking lines...</div>
-      
+      <div class="feedback-text" id="feedback">Initializing mirror...</div>
+      <div class="arm-feedback" id="armFeedback">Tracking full body...</div>
       <div class="btn-group" style="margin-top: 30px;">
         <button type="button" class="secondary" onclick="goToEndSession()">End Session ➔</button>
       </div>
@@ -261,42 +114,21 @@
 
   <div id="summary-page" class="page">
     <h2>Session Summary</h2>
-    <p>Here is your structured performance performance breakdown by position:</p>
-    
-    <div id="summaryContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
-      </div>
-
+    <div id="summaryContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
     <div class="btn-group" style="justify-content: flex-end;">
-      <button type="button" onclick="goToProfile()">Start New Session ➔</button>
+      <button type="button" onclick="goToProfile()">New Session ➔</button>
     </div>
   </div>
 
   <script>
-    // --- NAVIGATION & STATE MANAGEMENT ---
-    let currentFocus = "full";
     let positionHistory = {}; 
 
-    function hideAllPages() {
-      document.getElementById('setup-page').style.display = 'none';
-      document.getElementById('profile-page').style.display = 'none';
-      document.getElementById('tracker-page').style.display = 'none';
-      document.getElementById('summary-page').style.display = 'none';
-    }
-
-    function goToSetup() {
-      hideAllPages();
-      document.getElementById('setup-page').style.display = 'flex';
-    }
-
+    function hideAllPages() { document.querySelectorAll('.page').forEach(p => p.style.display = 'none'); }
+    function goToSetup() { hideAllPages(); document.getElementById('setup-page').style.display = 'flex'; }
     function goToProfile() {
       hideAllPages();
-      currentFocus = document.getElementById('cameraFocus').value;
-      
       document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
       document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
-      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : "Full Body (Lower Focus Added)";
-      document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
-      
       document.getElementById('profile-page').style.display = 'flex';
       document.getElementById('profile-page').style.flexDirection = 'column';
     }
@@ -306,17 +138,10 @@
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
       positionHistory = {}; 
-      
       setTimeout(async () => {
         if (!cameraStarted && typeof camera !== 'undefined') {
-          try {
-            await camera.start();
-            cameraStarted = true;
-            document.getElementById('feedback').innerText = "Mirror connected! Move back so full legs are visible.";
-          } catch(e) {
-            console.error("Camera engine error:", e);
-            document.getElementById('feedback').innerText = "Camera setup timed out. Check browser settings.";
-          }
+          try { await camera.start(); cameraStarted = true; document.getElementById('feedback').innerText = "Mirror connected. Show me your lines."; } 
+          catch(e) { document.getElementById('feedback').innerText = "Camera error."; }
         }
       }, 10);
     }
@@ -325,23 +150,14 @@
       hideAllPages();
       const container = document.getElementById('summaryContainer');
       container.innerHTML = "";
-
       const trackedPositions = Object.keys(positionHistory);
-
-      if (trackedPositions.length === 0) {
-        container.innerHTML = "<div class='summary-block'><h3>No Positions Tracked</h3><ul><li>Make sure your legs/feet are clear inside the frame.</li></ul></div>";
-      } else {
+      if (trackedPositions.length === 0) container.innerHTML = "<div class='summary-block'><h3>No Positions Tracked</h3></div>";
+      else {
         trackedPositions.forEach(pos => {
           let blockHTML = `<div class='summary-block'><h3>${pos}</h3><ul>`;
           let errors = Array.from(positionHistory[pos]); 
-          
-          if (errors.length === 0) {
-            blockHTML += `<li>✨ Perfect alignment kept throughout! Great form.</li>`;
-          } else {
-            errors.forEach(err => {
-              blockHTML += `<li>${err}</li>`;
-            });
-          }
+          if (errors.length === 0) blockHTML += `<li>✨ Perfect alignment kept throughout!</li>`;
+          else errors.forEach(err => blockHTML += `<li>${err}</li>`);
           blockHTML += `</ul></div>`;
           container.innerHTML += blockHTML;
         });
@@ -349,11 +165,9 @@
       document.getElementById('summary-page').style.display = 'flex';
     }
 
-    // --- AI MATH & ALIGNMENT LOGIC ---
     const videoElement = document.getElementsByClassName('input_video')[0];
     const canvasElement = document.getElementsByClassName('output_canvas')[0];
     const canvasCtx = canvasElement.getContext('2d');
-    
     const feedbackText = document.getElementById('feedback');
     const armFeedbackText = document.getElementById('armFeedback');
     const detectedPositionBadge = document.getElementById('detectedPosition');
@@ -361,148 +175,125 @@
     function calculateAngle(a, b, c) {
       let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
       let angle = Math.abs(radians * 180.0 / Math.PI);
-      if (angle > 180.0) angle = 360 - angle;
-      return angle;
+      return angle > 180.0 ? 360 - angle : angle;
     }
 
     function onResults(results) {
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
       canvasCtx.translate(canvasElement.width, 0);
       canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
-        // Hide standard facial landmarks for clean ballet view
-        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
-
+        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0; // Hide face lines
+        
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
         drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
 
-        // Upper Body Points
-        let leftShoulder = results.poseLandmarks[11];
-        let rightShoulder = results.poseLandmarks[12];
-        
-        // Lower Body Structural Keypoints
-        let leftHip = results.poseLandmarks[23];
-        let rightHip = results.poseLandmarks[24];
-        let leftKnee = results.poseLandmarks[25];
-        let rightKnee = results.poseLandmarks[26];
-        let leftAnkle = results.poseLandmarks[27];
-        let rightAnkle = results.poseLandmarks[28];
-        let leftHeel = results.poseLandmarks[29];
-        let rightHeel = results.poseLandmarks[30];
+        let nose = results.poseLandmarks[0];
+        let leftEar = results.poseLandmarks[7];
+        let rightEar = results.poseLandmarks[8];
 
-        // Normalization Base Definitions
+        let leftShoulder = results.poseLandmarks[11], rightShoulder = results.poseLandmarks[12];
+        let leftWrist = results.poseLandmarks[15], rightWrist = results.poseLandmarks[16];
+        let leftHip = results.poseLandmarks[23], rightHip = results.poseLandmarks[24];
+        let leftKnee = results.poseLandmarks[25], rightKnee = results.poseLandmarks[26];
+        let leftAnkle = results.poseLandmarks[27], rightAnkle = results.poseLandmarks[28];
+        let leftFoot = results.poseLandmarks[31], rightFoot = results.poseLandmarks[32]; // Foot indexes for toe tracking
+
         let torsoHeight = Math.max(0.1, Math.abs(((leftHip.y + rightHip.y)/2) - ((leftShoulder.y + rightShoulder.y)/2))); 
         let hipWidth = Math.abs(leftHip.x - rightHip.x);
         let currentFrameErrors = [];
-
-        // Knee Extension (Turnout/Straight check)
-        let leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
-        let rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
-
-        // Lower Positional Metrics
-        let distanceBetweenAnkles = Math.abs(leftAnkle.x - rightAnkle.x);
-        let verticalAnkleDiff = Math.abs(leftAnkle.y - rightAnkle.y);
-        let lateralKneeDist = Math.abs(leftKnee.x - rightKnee.x);
-
         let currentPosName = "Transitioning...";
 
-        // Ensure lower body visibility before classification
-        if (leftAnkle.visibility > 0.5 && rightAnkle.visibility > 0.5) {
+        // ---- 1. ARABESQUE & EXTENSION DETECTION ----
+        // Detect if one foot is significantly lifted back (using y-height and x-spread)
+        let leftLegLifted = leftAnkle.y < rightAnkle.y - (0.15 * torsoHeight) && Math.abs(leftAnkle.x - rightAnkle.x) > 0.15;
+        let rightLegLifted = rightAnkle.y < leftAnkle.y - (0.15 * torsoHeight) && Math.abs(rightAnkle.x - leftAnkle.x) > 0.15;
+
+        if (leftLegLifted || rightLegLifted) {
+          currentPosName = "Arabesque Line";
           
-          // --- 1. DETECT B+ POSITION (Classical Position) ---
-          let isLeftKneeRelaxed = leftKneeAngle < 155;
-          let isRightKneeRelaxed = rightKneeAngle < 155;
+          // Shoulders Down Check
+          if (Math.abs(leftShoulder.y - leftEar.y) < 0.08 || Math.abs(rightShoulder.y - rightEar.y) < 0.08) {
+            currentFrameErrors.push("Shoulders are creeping up. Press them down and lengthen your neck.");
+          }
           
-          if ((isLeftKneeRelaxed && !isRightKneeRelaxed && leftAnkle.y > rightAnkle.y - 0.05) || 
-              (isRightKneeRelaxed && !isLeftKneeRelaxed && rightAnkle.y > leftAnkle.y - 0.05)) {
-            
-            currentPosName = "B+ Position";
-            
-            // Check structural placement for B+
-            if (lateralKneeDist > hipWidth * 1.5) {
-              currentFrameErrors.push("Keep the working knee grouped tightly behind or tucked to the supporting leg.");
-            }
-            if (!isLeftKneeRelaxed && leftKneeAngle < 165) currentFrameErrors.push("Pulled up support leg is sagging. Straighten the working knee.");
-            if (!isRightKneeRelaxed && rightKneeAngle < 165) currentFrameErrors.push("Pulled up support leg is sagging. Straighten the working knee.");
-          }
-          // --- 2. DETECT OPEN FOOT WIDTHS (2nd and 4th Position) ---
-          else if (distanceBetweenAnkles > hipWidth * 1.6) {
-            // Check depth offset for 4th vs lateral for 2nd
-            if (verticalAnkleDiff > 0.08 * torsoHeight) {
-              currentPosName = "4th Position (Feet)";
-              if (leftKneeAngle < 165 || rightKneeAngle < 165) {
-                currentFrameErrors.push("Engage your quads. Straighten both knees to ground the fourth position stance.");
-              }
-            } else {
-              currentPosName = "2nd Position (Feet)";
-              if (distanceBetweenAnkles > hipWidth * 3.2) {
-                currentFrameErrors.push("Stance is too wide. Keep second position exactly one and a half feet long.");
-              }
-            }
-          }
-          // --- 3. DETECT TIGHT / CROSSED POSITIONS (1st, 3rd, 5th) ---
-          else {
-            let areHeelsTouching = distanceBetweenAnkles < hipWidth * 0.6;
-            
-            if (areHeelsTouching) {
-              currentPosName = "1st Position (Feet)";
-              if (leftKneeAngle < 162 || rightKneeAngle < 162) {
-                currentFrameErrors.push("Connect your heels completely and pull up through your inner thighs.");
-              }
-            } else {
-              // Deep overlap means 5th, minor means 3rd
-              let absoluteOverlap = Math.abs(leftHeel.x - rightAnkle.x);
-              if (absoluteOverlap < 0.03) {
-                currentPosName = "5th Position (Feet)";
-                if (leftKneeAngle < 166 || rightKneeAngle < 166) {
-                  currentFrameErrors.push("In 5th, your knees must lock completely straight without sacrificing turnout.");
-                }
-              } else {
-                currentPosName = "3rd Position (Feet)";
-              }
-            }
+          // Eyeline Check
+          if (nose.y > leftShoulder.y - 0.05) {
+            currentFrameErrors.push("Eyeline is dropping. Lift your chin and project outward.");
           }
 
-          // Global lower alignment checks
-          if (Math.abs(leftHip.y - rightHip.y) > 0.05 * torsoHeight) {
-            currentFrameErrors.push("Hips are un-squared or dropping. Keep the pelvis perfectly level.");
+          // Pitching/Leaning Forward Check
+          let avgShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
+          let avgHipX = (leftHip.x + rightHip.x) / 2;
+          if (Math.abs(avgShoulderX - avgHipX) > 0.12 * torsoHeight) {
+            currentFrameErrors.push("You are leaning too far forward. Lift your chest and pull your weight back over the supporting leg.");
+          }
+
+          // Working Leg Turnout Check
+          let liftedKnee = leftLegLifted ? leftKnee : rightKnee;
+          let liftedAnkle = leftLegLifted ? leftAnkle : rightAnkle;
+          if (liftedKnee.y > liftedAnkle.y) {
+            currentFrameErrors.push("Ensure turnout on the lifted leg—don't let the knee face the floor.");
+          }
+
+          // Arm Level Checks
+          let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+          if (leftWrist.y > avgShoulderY + 0.1 && rightWrist.y > avgShoulderY + 0.1) {
+            currentFrameErrors.push("Arms are too low for Arabesque. Lift the forward arm to eye level.");
+          } else if (leftWrist.y < avgShoulderY - 0.25 || rightWrist.y < avgShoulderY - 0.25) {
+            currentFrameErrors.push("Arms are reaching too high. Keep the lines elongated from the shoulder.");
+          }
+        } 
+        
+        // ---- 2. GROUNDED STANCE & TURNOUT CHECKS ----
+        else if (leftAnkle.visibility > 0.5 && rightAnkle.visibility > 0.5) {
+          let distanceBetweenAnkles = Math.abs(leftAnkle.x - rightAnkle.x);
+          let areHeelsTouching = distanceBetweenAnkles < hipWidth * 0.6;
+          
+          if (areHeelsTouching) currentPosName = "1st/5th Position";
+          else if (distanceBetweenAnkles > hipWidth * 1.5) currentPosName = "2nd/4th Position";
+
+          // "Forcing Turnout" / Rolling on Arches Check
+          // If feet are wider than knees, the knees are collapsing inward
+          let kneeDistance = Math.abs(leftKnee.x - rightKnee.x);
+          if (distanceBetweenAnkles > kneeDistance + 0.05) {
+            currentFrameErrors.push("Don't force turnout from your feet! Your knees are dropping inward. Rotate from the hips and stop rolling on your arches.");
+          }
+
+          // "Leaning on Toes" / "Crunching Toes" Check
+          // If the ankle is pushed too far vertically in front of the toe line while grounded
+          let leftToePitch = leftAnkle.x - leftFoot.x;
+          let rightToePitch = rightAnkle.x - rightFoot.x;
+          if (Math.abs(leftToePitch) > 0.08 || Math.abs(rightToePitch) > 0.08) {
+            currentFrameErrors.push("Don't lean on your toes or crunch them into the floor. Spread your weight evenly through the metatarsals.");
           }
         }
 
-        // --- CONTEXTUAL CRITIQUE GENERATION ---
-        if (currentPosName === "B+ Position") {
-          feedbackText.innerText = "Classical resting line. Rest the working big toe neatly on its tip with the heel highly forward.";
-        } else if (currentPosName === "1st Position (Feet)") {
-          feedbackText.innerText = "Rotate completely outward from the hip sockets, not the ankles. Heels must firmly touch.";
-        } else if (currentPosName === "2nd Position (Feet)") {
-          feedbackText.innerText = "Distribute body weight perfectly between both feet. Do not roll into your arches.";
-        } else if (currentPosName === "3rd Position (Feet)") {
-          feedbackText.innerText = "Heel matching opposite mid-foot. Ideal preparation track for beginners.";
-        } else if (currentPosName === "4th Position (Feet)") {
-          feedbackText.innerText = "Maintain parallel spacing between the heels. Ensure hips remain square to the front.";
-        } else if (currentPosName === "5th Position (Feet)") {
-          feedbackText.innerText = "Advanced crossing line. The heel of the front foot should fully cover the toe of the back foot.";
+        // --- UI UPDATES ---
+        if (currentPosName === "Arabesque Line") {
+          feedbackText.innerText = "Holding Arabesque. Focus on elongation and suspension through the spine.";
+        } else if (currentPosName === "1st/5th Position") {
+          feedbackText.innerText = "Grounded close position. Pull up through the inner thighs.";
+        } else if (currentPosName === "2nd/4th Position") {
+          feedbackText.innerText = "Grounded open position. Keep your pelvis perfectly centered.";
         } else {
-          feedbackText.innerText = "Stepping or shifting alignment... Ensure the camera captures your complete vertical extension.";
+          feedbackText.innerText = "Tracking full body geometry...";
         }
 
         detectedPositionBadge.innerText = currentPosName;
 
         if (currentPosName !== "Transitioning...") {
-          if (!positionHistory[currentPosName]) {
-            positionHistory[currentPosName] = new Set();
-          }
+          if (!positionHistory[currentPosName]) positionHistory[currentPosName] = new Set();
           currentFrameErrors.forEach(err => positionHistory[currentPosName].add(err));
         }
 
         if (currentFrameErrors.length === 0) {
-          armFeedbackText.innerText = "✨ Lower stance verified. Clean lines and secure vertical turnout.";
+          armFeedbackText.innerText = "✨ Alignment is secure. Beautiful line.";
         } else {
-          armFeedbackText.innerText = currentFrameErrors.join(" ");
+          armFeedbackText.innerHTML = currentFrameErrors.map(e => `• ${e}`).join("<br>");
         }
       }
       canvasCtx.restore();

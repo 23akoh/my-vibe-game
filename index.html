@@ -189,8 +189,6 @@
       color: #555;
       font-size: 0.95em;
     }
-
-    .error-text { color: #d9534f; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -217,13 +215,12 @@
 
     <label>Camera Focus Area</label>
     <select id="cameraFocus">
-      <option value="upper" selected>Upper Body (Arms, Back, Head)</option>
-      <option value="lower">Lower Body (Legs, Feet)</option>
-      <option value="full">Full Body</option>
+      <option value="full" selected>Full Body (Arms & Lower Leg Positions)</option>
+      <option value="upper">Upper Body Only</option>
     </select>
 
     <label>Your Focus / Goals</label>
-    <input type="text" id="userGoals" placeholder="E.g. Extended lines, softer fingers...">
+    <input type="text" id="userGoals" placeholder="E.g. Clear turnout, clean fifth, accurate B+...">
     
     <div class="btn-group" style="justify-content: flex-end;">
       <button type="button" onclick="goToProfile()">Next ➔</button>
@@ -254,7 +251,7 @@
       <h2>Live Feedback</h2>
       <div class="status-badge" id="detectedPosition">Detecting...</div>
       <div class="feedback-text" id="feedback">Initializing camera mirror...</div>
-      <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
+      <div class="arm-feedback" id="armFeedback">Tracking lines...</div>
       
       <div class="btn-group" style="margin-top: 30px;">
         <button type="button" class="secondary" onclick="goToEndSession()">End Session ➔</button>
@@ -276,7 +273,7 @@
 
   <script>
     // --- NAVIGATION & STATE MANAGEMENT ---
-    let currentFocus = "upper";
+    let currentFocus = "full";
     let positionHistory = {}; 
 
     function hideAllPages() {
@@ -297,7 +294,7 @@
       
       document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
       document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
-      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : currentFocus === "lower" ? "Lower Body" : "Full Body";
+      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : "Full Body (Lower Focus Added)";
       document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
       
       document.getElementById('profile-page').style.display = 'flex';
@@ -306,21 +303,19 @@
 
     let cameraStarted = false;
     function goToTracker() {
-      // 1. INSTANTLY flip the UI layout without waiting for anything else
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
       positionHistory = {}; 
       
-      // 2. Offload the camera initialization safely to an isolated async block
       setTimeout(async () => {
         if (!cameraStarted && typeof camera !== 'undefined') {
           try {
             await camera.start();
             cameraStarted = true;
-            document.getElementById('feedback').innerText = "Mirror connected! Assume a position to begin tracking.";
+            document.getElementById('feedback').innerText = "Mirror connected! Move back so full legs are visible.";
           } catch(e) {
             console.error("Camera engine error:", e);
-            document.getElementById('feedback').innerText = "Camera setup timed out. Please verify camera permissions in your browser bar.";
+            document.getElementById('feedback').innerText = "Camera setup timed out. Check browser settings.";
           }
         }
       }, 10);
@@ -334,7 +329,7 @@
       const trackedPositions = Object.keys(positionHistory);
 
       if (trackedPositions.length === 0) {
-        container.innerHTML = "<div class='summary-block'><h3>No Positions Tracked</h3><ul><li>Try staying inside the camera frame longer next session!</li></ul></div>";
+        container.innerHTML = "<div class='summary-block'><h3>No Positions Tracked</h3><ul><li>Make sure your legs/feet are clear inside the frame.</li></ul></div>";
       } else {
         trackedPositions.forEach(pos => {
           let blockHTML = `<div class='summary-block'><h3>${pos}</h3><ul>`;
@@ -379,139 +374,120 @@
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
+        // Hide standard facial landmarks for clean ballet view
         for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
 
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
         drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
 
-        let leftWrist = results.poseLandmarks[15];
-        let rightWrist = results.poseLandmarks[16];
-        let leftElbow = results.poseLandmarks[13];
-        let rightElbow = results.poseLandmarks[14];
+        // Upper Body Points
         let leftShoulder = results.poseLandmarks[11];
         let rightShoulder = results.poseLandmarks[12];
+        
+        // Lower Body Structural Keypoints
         let leftHip = results.poseLandmarks[23];
         let rightHip = results.poseLandmarks[24];
+        let leftKnee = results.poseLandmarks[25];
+        let rightKnee = results.poseLandmarks[26];
+        let leftAnkle = results.poseLandmarks[27];
+        let rightAnkle = results.poseLandmarks[28];
+        let leftHeel = results.poseLandmarks[29];
+        let rightHeel = results.poseLandmarks[30];
 
-        // --- DYNAMIC NORMALIZATION UNIT ---
-        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-        let avgHipY = (leftHip.y + rightHip.y) / 2;
-        let torsoHeight = Math.max(0.1, Math.abs(avgHipY - avgShoulderY)); 
-        let bodyCenterX = (leftShoulder.x + rightShoulder.x) / 2;
-
-        let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-        let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+        // Normalization Base Definitions
+        let torsoHeight = Math.max(0.1, Math.abs(((leftHip.y + rightHip.y)/2) - ((leftShoulder.y + rightShoulder.y)/2))); 
+        let hipWidth = Math.abs(leftHip.x - rightHip.x);
         let currentFrameErrors = [];
 
-        // --- HIGH ACCURACY ERROR ANALYSIS ---
-        if (Math.abs(leftShoulder.y - rightShoulder.y) > 0.04 * torsoHeight) {
-          currentFrameErrors.push("Shoulders are uneven. Pull your shoulder blades down and square the collarbones.");
-        }
+        // Knee Extension (Turnout/Straight check)
+        let leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+        let rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
 
-        let verticalWristDiff = Math.abs(leftWrist.y - rightWrist.y);
+        // Lower Positional Metrics
+        let distanceBetweenAnkles = Math.abs(leftAnkle.x - rightAnkle.x);
+        let verticalAnkleDiff = Math.abs(leftAnkle.y - rightAnkle.y);
+        let lateralKneeDist = Math.abs(leftKnee.x - rightKnee.x);
 
-        let leftHigh = leftWrist.y < avgShoulderY - (0.22 * torsoHeight);
-        let rightHigh = rightWrist.y < avgShoulderY - (0.22 * torsoHeight);
-        let leftMid = leftWrist.y >= avgShoulderY - (0.22 * torsoHeight) && leftWrist.y <= avgShoulderY + (0.20 * torsoHeight);
-        let rightMid = rightWrist.y >= avgShoulderY - (0.22 * torsoHeight) && rightWrist.y <= avgShoulderY + (0.20 * torsoHeight);
-        let leftLow = leftWrist.y > avgShoulderY + (0.20 * torsoHeight);
-        let rightLow = rightWrist.y > avgShoulderY + (0.20 * torsoHeight);
-
-        let leftLateralDist = Math.abs(leftWrist.x - bodyCenterX);
-        let rightLateralDist = Math.abs(rightWrist.x - bodyCenterX);
-        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
-
-        // --- ARABESQUE & POSITION DISCRIMINATION MATRIX ---
-        let isLeftExtended = leftAngle > 152;
-        let isRightExtended = rightAngle > 152;
         let currentPosName = "Transitioning...";
 
-        let bothArmsLeftOfCenter = leftWrist.x < bodyCenterX && rightWrist.x < bodyCenterX;
-        let bothArmsRightOfCenter = leftWrist.x > bodyCenterX && rightWrist.x > bodyCenterX;
-        let profileExtension = (bothArmsLeftOfCenter || bothArmsRightOfCenter) && (isLeftExtended || isRightExtended);
-
-        if (profileExtension) {
-          if (verticalWristDiff < 0.12 * torsoHeight) {
-            currentPosName = "3rd Arabesque Line";
-          } else if (verticalWristDiff >= 0.12 * torsoHeight && verticalWristDiff < 0.28 * torsoHeight) {
-            currentPosName = "4th Arabesque Line";
-          }
-        } 
-        else if ((isLeftExtended || isRightExtended) && wristDistance > 0.45) {
-          if (verticalWristDiff > 0.15 * torsoHeight) {
-            currentPosName = "1st Arabesque Line";
-          } else {
-            currentPosName = "2nd Arabesque Line";
-          }
-        }
-
-        if (currentPosName === "Transitioning...") {
-          if ((leftHigh && rightHigh) || (leftMid && rightMid) || (leftLow && rightLow)) {
-            if (verticalWristDiff > 0.07 * torsoHeight) {
-              currentFrameErrors.push("One arm is riding higher up than the other. Balance your working frame.");
-            }
-          }
-
-          if (leftAngle > 164) currentFrameErrors.push("Left elbow is locked straight. Soften the line.");
-          else if (leftAngle < 115) currentFrameErrors.push("Left elbow is collapsing or over-bent.");
+        // Ensure lower body visibility before classification
+        if (leftAnkle.visibility > 0.5 && rightAnkle.visibility > 0.5) {
           
-          if (rightAngle > 164) currentFrameErrors.push("Right elbow is locked straight. Soften the line.");
-          else if (rightAngle < 115) currentFrameErrors.push("Right elbow is collapsing or over-bent.");
+          // --- 1. DETECT B+ POSITION (Classical Position) ---
+          let isLeftKneeRelaxed = leftKneeAngle < 155;
+          let isRightKneeRelaxed = rightKneeAngle < 155;
+          
+          if ((isLeftKneeRelaxed && !isRightKneeRelaxed && leftAnkle.y > rightAnkle.y - 0.05) || 
+              (isRightKneeRelaxed && !isLeftKneeRelaxed && rightAnkle.y > leftAnkle.y - 0.05)) {
+            
+            currentPosName = "B+ Position";
+            
+            // Check structural placement for B+
+            if (lateralKneeDist > hipWidth * 1.5) {
+              currentFrameErrors.push("Keep the working knee grouped tightly behind or tucked to the supporting leg.");
+            }
+            if (!isLeftKneeRelaxed && leftKneeAngle < 165) currentFrameErrors.push("Pulled up support leg is sagging. Straighten the working knee.");
+            if (!isRightKneeRelaxed && rightKneeAngle < 165) currentFrameErrors.push("Pulled up support leg is sagging. Straighten the working knee.");
+          }
+          // --- 2. DETECT OPEN FOOT WIDTHS (2nd and 4th Position) ---
+          else if (distanceBetweenAnkles > hipWidth * 1.6) {
+            // Check depth offset for 4th vs lateral for 2nd
+            if (verticalAnkleDiff > 0.08 * torsoHeight) {
+              currentPosName = "4th Position (Feet)";
+              if (leftKneeAngle < 165 || rightKneeAngle < 165) {
+                currentFrameErrors.push("Engage your quads. Straighten both knees to ground the fourth position stance.");
+              }
+            } else {
+              currentPosName = "2nd Position (Feet)";
+              if (distanceBetweenAnkles > hipWidth * 3.2) {
+                currentFrameErrors.push("Stance is too wide. Keep second position exactly one and a half feet long.");
+              }
+            }
+          }
+          // --- 3. DETECT TIGHT / CROSSED POSITIONS (1st, 3rd, 5th) ---
+          else {
+            let areHeelsTouching = distanceBetweenAnkles < hipWidth * 0.6;
+            
+            if (areHeelsTouching) {
+              currentPosName = "1st Position (Feet)";
+              if (leftKneeAngle < 162 || rightKneeAngle < 162) {
+                currentFrameErrors.push("Connect your heels completely and pull up through your inner thighs.");
+              }
+            } else {
+              // Deep overlap means 5th, minor means 3rd
+              let absoluteOverlap = Math.abs(leftHeel.x - rightAnkle.x);
+              if (absoluteOverlap < 0.03) {
+                currentPosName = "5th Position (Feet)";
+                if (leftKneeAngle < 166 || rightKneeAngle < 166) {
+                  currentFrameErrors.push("In 5th, your knees must lock completely straight without sacrificing turnout.");
+                }
+              } else {
+                currentPosName = "3rd Position (Feet)";
+              }
+            }
+          }
 
-          if (leftHigh && rightHigh) {
-            currentPosName = (wristDistance < 0.25) ? "5th Position" : "Open 5th Position";
-          } 
-          else if (leftMid && rightMid) {
-            if (wristDistance > 0.52) currentPosName = "2nd Position";
-            else if (wristDistance < 0.26) currentPosName = "1st Position";
-            else currentPosName = "Demi-Seconde";
-          } 
-          else if (leftLow && rightLow) {
-            if (wristDistance < 0.28) {
-              currentPosName = "Bras Bas";
-            } else {
-              currentPosName = "Open 4th Position";
-            }
-          }
-          else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
-            let midArmDist = leftMid ? leftLateralDist : rightLateralDist;
-            if (midArmDist < 0.26) {
-              currentPosName = "4th Position";
-            } else {
-              currentPosName = "3rd Position";
-            }
-          }
-          else if ((leftMid && rightLow) || (rightMid && leftLow)) {
-            currentPosName = "Open 4th Position";
+          // Global lower alignment checks
+          if (Math.abs(leftHip.y - rightHip.y) > 0.05 * torsoHeight) {
+            currentFrameErrors.push("Hips are un-squared or dropping. Keep the pelvis perfectly level.");
           }
         }
 
         // --- CONTEXTUAL CRITIQUE GENERATION ---
-        if (currentPosName === "1st Arabesque Line") {
-          feedbackText.innerText = "Classic profile extension. Keep the forward hand precisely at eye level and lift the chest.";
-          if (leftWrist.y > avgShoulderY || rightWrist.y > avgShoulderY) currentFrameErrors.push("Forward arm is dropping below shoulder line.");
-        } else if (currentPosName === "2nd Arabesque Line") {
-          feedbackText.innerText = "Keep shoulders completely square. Lengthen outward from the back matching shoulder blade.";
-        } else if (currentPosName === "3rd Arabesque Line") {
-          feedbackText.innerText = "Both arms forward. Ensure the upstage arm frames cleanly without hiding your face.";
-        } else if (currentPosName === "4th Arabesque Line") {
-          feedbackText.innerText = "Opposition cross line. Support through your core; don't let your lower back arch backward.";
-        } else if (currentPosName === "5th Position") {
-          feedbackText.innerText = "Ensure you can see your palms without tilting your chin up. Keep elbows wide.";
-        } else if (currentPosName === "Open 5th Position") {
-          feedbackText.innerText = "Keep the high lateral line clear. Do not let hands drop behind your ears.";
-        } else if (currentPosName === "4th Position") {
-          feedbackText.innerText = "One arm high, one arm curved in front (1st). Keep the box of your shoulders perfectly square.";
-        } else if (currentPosName === "3rd Position") {
-          feedbackText.innerText = "One arm high, one arm out to the side (2nd). Lift out of your ribcage.";
-        } else if (currentPosName === "1st Position") {
-          feedbackText.innerText = "Maintain an active oval circle opposite your sternum. Support from the under-arms.";
-        } else if (currentPosName === "2nd Position") {
-          feedbackText.innerText = "Slope the line down smoothly from the shoulder down to the wrist. Never let elbows drop.";
-        } else if (currentPosName === "Bras Bas") {
-          feedbackText.innerText = "Preparatory curve. Keep hands suspended forward away from your hips to preserve space.";
+        if (currentPosName === "B+ Position") {
+          feedbackText.innerText = "Classical resting line. Rest the working big toe neatly on its tip with the heel highly forward.";
+        } else if (currentPosName === "1st Position (Feet)") {
+          feedbackText.innerText = "Rotate completely outward from the hip sockets, not the ankles. Heels must firmly touch.";
+        } else if (currentPosName === "2nd Position (Feet)") {
+          feedbackText.innerText = "Distribute body weight perfectly between both feet. Do not roll into your arches.";
+        } else if (currentPosName === "3rd Position (Feet)") {
+          feedbackText.innerText = "Heel matching opposite mid-foot. Ideal preparation track for beginners.";
+        } else if (currentPosName === "4th Position (Feet)") {
+          feedbackText.innerText = "Maintain parallel spacing between the heels. Ensure hips remain square to the front.";
+        } else if (currentPosName === "5th Position (Feet)") {
+          feedbackText.innerText = "Advanced crossing line. The heel of the front foot should fully cover the toe of the back foot.";
         } else {
-          feedbackText.innerText = "Transitioning smoothly. Maintain your core posture and hold your head high.";
+          feedbackText.innerText = "Stepping or shifting alignment... Ensure the camera captures your complete vertical extension.";
         }
 
         detectedPositionBadge.innerText = currentPosName;
@@ -524,7 +500,7 @@
         }
 
         if (currentFrameErrors.length === 0) {
-          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and elongate through your fingers.";
+          armFeedbackText.innerText = "✨ Lower stance verified. Clean lines and secure vertical turnout.";
         } else {
           armFeedbackText.innerText = currentFrameErrors.join(" ");
         }

@@ -51,7 +51,6 @@
     }
 
     h1 {
-      /* Uses Cosmopolitan if you have it, otherwise uses Great Vibes */
       font-family: 'Cosmopolitan', 'Great Vibes', cursive; 
       font-size: 3.5em;
       font-weight: normal;
@@ -62,7 +61,6 @@
 
     /* --- PAGE CONTAINERS --- */
     .page {
-      display: none; /* Everything hidden by default, JS controls this now */
       background: #ffffff;
       padding: 30px;
       border-radius: 20px;
@@ -70,6 +68,11 @@
       width: 450px;
       text-align: left;
     }
+
+    /* HARDCODING VISIBILITY SO IT DOESN'T GLITCH */
+    #setup-page { display: flex; flex-direction: column; }
+    #profile-page { display: none; }
+    #tracker-page { display: none; width: auto; background: transparent; box-shadow: none; align-items: flex-start; gap: 20px; }
 
     /* --- INPUTS & BUTTONS --- */
     label {
@@ -88,6 +91,17 @@
       border-radius: 10px;
       font-family: inherit;
       background-color: #fafafa;
+    }
+
+    #gradesContainer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 0.9em;
+      color: #666;
     }
 
     .btn-group {
@@ -117,14 +131,6 @@
     button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
     /* --- TRACKER APP --- */
-    #tracker-page {
-      width: auto;
-      background: transparent;
-      box-shadow: none;
-      gap: 20px;
-      align-items: flex-start;
-    }
-
     .tracker-container {
       position: relative;
       border: 8px solid #ffffff;
@@ -202,9 +208,21 @@
       <option value="Balanchine">Balanchine</option>
       <option value="Cecchetti">Cecchetti</option>
       <option value="French School">French School</option>
-      <option value="Royal Academy of Dance (RAD)">Royal Academy of Dance (RAD)</option>
       <option value="Bournonville">Bournonville</option>
     </select>
+
+    <label>Exam Board (Optional)</label>
+    <input list="boards" id="boardInput" placeholder="Type your Exam Board (e.g. RAD)" onchange="updateGrades()">
+    <datalist id="boards">
+      <option value="RAD (Royal Academy of Dance)">
+      <option value="ISTD (Imperial Society)">
+      <option value="IDTA (International Dance Teachers)">
+      <option value="BBO (bbodance)">
+      <option value="ABD (Associated Board of Dance)">
+    </datalist>
+
+    <div id="gradesContainer">
+      </div>
 
     <label>Your Focus / Goals</label>
     <input type="text" id="userGoals" placeholder="E.g. Better turnout, softer arms...">
@@ -218,6 +236,7 @@
     <h2>Dancer Dashboard</h2>
     <p><strong>Name:</strong> <span id="display-name"></span></p>
     <p><strong>Method:</strong> <span id="display-method"></span></p>
+    <p><strong>Exam Board:</strong> <span id="display-board"></span></p>
     <p><strong>Goals:</strong> <span id="display-goals"></span></p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
     
@@ -246,7 +265,28 @@
   </div>
 
   <script>
-    // --- BULLETPROOF NAVIGATION LOGIC ---
+    // --- EXAM BOARD LOGIC ---
+    const syllabusData = {
+      "RAD (Royal Academy of Dance)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Intermediate Foundation", "Intermediate", "Advanced Foundation", "Advanced 1", "Advanced 2"],
+      "ISTD (Imperial Society)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Intermediate Foundation", "Intermediate", "Advanced 1", "Advanced 2"],
+      "IDTA (International Dance Teachers)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate", "Advanced 1", "Advanced 2"],
+      "BBO (bbodance)": ["Pre-Syllabus", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate Foundation", "Intermediate"],
+      "ABD (Associated Board of Dance)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Majors"]
+    };
+
+    function updateGrades() {
+      const board = document.getElementById('boardInput').value;
+      const container = document.getElementById('gradesContainer');
+      container.innerHTML = ""; 
+
+      if (syllabusData[board]) {
+        syllabusData[board].forEach(grade => {
+          container.innerHTML += `<label style="margin-top:0; font-weight:normal;"><input type="checkbox" value="${grade}"> ${grade}</label>`;
+        });
+      }
+    }
+
+    // --- NAVIGATION LOGIC ---
     function hideAllPages() {
       document.getElementById('setup-page').style.display = 'none';
       document.getElementById('profile-page').style.display = 'none';
@@ -256,14 +296,13 @@
     function goToSetup() {
       hideAllPages();
       document.getElementById('setup-page').style.display = 'flex';
-      document.getElementById('setup-page').style.flexDirection = 'column';
     }
 
     function goToProfile() {
       hideAllPages();
-      // Update Dashboard Text
       document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
       document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
+      document.getElementById('display-board').innerText = document.getElementById('boardInput').value || "None";
       document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
       
       document.getElementById('profile-page').style.display = 'flex';
@@ -274,16 +313,12 @@
     function goToTracker() {
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
-      document.getElementById('tracker-page').style.flexDirection = 'row';
       
       if (!cameraStarted) {
         camera.start();
         cameraStarted = true;
       }
     }
-
-    // Initialize the app by showing the first page
-    goToSetup();
 
     // --- AI MATH & LOGIC ---
     const videoElement = document.getElementsByClassName('input_video')[0];
@@ -351,4 +386,25 @@
         } 
         else if (!leftHigh && !rightHigh && wristDistance < 0.25) {
           detectedPositionBadge.innerText = "1st Position";
-          feedbackText.innerText = "Hold the beach ball in front of your navel. No tension
+          feedbackText.innerText = "Hold the beach ball in front of your navel. No tension in the hands.";
+        }
+        else {
+          detectedPositionBadge.innerText = "Tracking...";
+          feedbackText.innerText = "Move into 1st, 2nd, or 5th position.";
+        }
+      }
+      canvasCtx.restore();
+    }
+
+    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => { await pose.send({image: videoElement}); },
+      width: 640, height: 480
+    });
+  </script>
+
+</body>
+</html>

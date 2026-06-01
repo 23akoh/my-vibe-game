@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Écarté.ai</title>
   
-  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M25,75 C35,60 42,48 48,42 M48,42 C60,38 75,32 88,32 M48,42 C45,32 46,22 50,16 C53,16 54,26 48,42 M48,42 C52,52 58,65 64,80' fill='none' stroke='%231a1a1a' stroke-width='4' stroke-linecap='round'/><path d='M40,39 C32,34 20,30 12,30' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round'/></svg>">
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -44,19 +44,10 @@
       margin-bottom: 25px;
     }
 
-    /* Minimalist Ballerina Line Drawing */
-    .ballerina-icon {
-      width: 100px;
-      height: 100px;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      font-family: 'Cosmopolitan', 'Great Vibes', cursive; 
-      font-size: 3.5em;
-      font-weight: normal;
-      color: #333;
-      margin: 0;
+    .logo {
+      width: 160px;
+      border-radius: 12px;
+      mix-blend-mode: multiply; 
     }
 
     /* --- PAGE CONTAINERS --- */
@@ -177,14 +168,26 @@
       font-size: 0.9em;
     }
 
-    .summary-list {
-      padding-left: 20px;
-      line-height: 1.6;
+    /* --- SUMMARY UI STYLING --- */
+    .summary-block {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #fafafa;
+      border-radius: 10px;
+      border-left: 4px solid #1a1a1a;
     }
 
-    .summary-list li {
-      margin-bottom: 10px;
+    .summary-block h3 {
+      margin: 0 0 5px 0;
+      font-size: 1.05em;
+      color: #222;
+    }
+
+    .summary-block ul {
+      margin: 0;
+      padding-left: 20px;
       color: #555;
+      font-size: 0.95em;
     }
 
     .error-text { color: #d9534f; font-weight: bold; }
@@ -193,13 +196,7 @@
 <body>
 
   <div class="header">
-    <svg class="ballerina-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50 20 C53 20 55 23 53 26 C51 28 49 28 48 32 C47 36 53 45 56 55 C58 62 61 75 62 85 C60 85 58 80 56 72 C54 65 51 58 49 58 C47 58 44 65 42 72 C40 80 38 85 36 85 C37 75 40 62 42 55 C45 45 51 36 50 32 C49 28 47 28 45 26 C43 23 45 20 47 20 Z" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M48 35 C40 32 30 25 25 25 C27 28 35 35 44 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M52 35 C60 32 70 25 75 25 C73 28 65 35 56 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M35 58 C40 55 50 53 55 53 C60 53 62 56 65 58" fill="none" stroke="#ff4d4d" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
-    <h1>Écarté.ai</h1>
+    <img src="Red and Black Ballet Logo.jpg" alt="Écarté.ai Logo" class="logo">
   </div>
 
   <div id="setup-page" class="page">
@@ -222,268 +219,4 @@
     <select id="cameraFocus">
       <option value="upper" selected>Upper Body (Arms, Back, Head)</option>
       <option value="lower">Lower Body (Legs, Feet)</option>
-      <option value="full">Full Body</option>
-    </select>
-
-    <label>Your Focus / Goals</label>
-    <input type="text" id="userGoals" placeholder="E.g. Extended lines, softer fingers...">
-    
-    <div class="btn-group" style="justify-content: flex-end;">
-      <button onclick="goToProfile()">Next ➔</button>
-    </div>
-  </div>
-
-  <div id="profile-page" class="page">
-    <h2>Dancer Dashboard</h2>
-    <p><strong>Name:</strong> <span id="display-name"></span></p>
-    <p><strong>Method:</strong> <span id="display-method"></span></p>
-    <p><strong>Tracking Focus:</strong> <span id="display-focus"></span></p>
-    <p><strong>Goals:</strong> <span id="display-goals"></span></p>
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-    
-    <div class="btn-group">
-      <button class="secondary" onclick="goToSetup()">Back</button>
-      <button onclick="goToTracker()">Enter Studio</button>
-    </div>
-  </div>
-
-  <div id="tracker-page" class="page">
-    <div class="tracker-container">
-      <video class="input_video" autoplay playsinline style="display:none;"></video>
-      <canvas class="output_canvas" width="640" height="480"></canvas>
-    </div>
-
-    <div class="feedback-panel">
-      <h2>Live Feedback</h2>
-      <div class="status-badge" id="detectedPosition">Detecting...</div>
-      <div class="feedback-text" id="feedback">Loading your mirror...</div>
-      <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
-      
-      <div class="btn-group" style="margin-top: 30px;">
-        <button class="secondary" onclick="goToEndSession()">End Session</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="summary-page" class="page">
-    <h2>Session Summary</h2>
-    <p>Great work in the studio! Here is the technique feedback collected during your session:</p>
-    <ul id="summaryFeedbackList" class="summary-list">
-      </ul>
-    <div class="btn-group" style="justify-content: flex-end;">
-      <button onclick="goToProfile()">Return to Dashboard</button>
-    </div>
-  </div>
-
-  <script>
-    // --- NAVIGATION & SUMMARY STORAGE ---
-    let currentFocus = "upper";
-    let gatheredFeedback = new Set(); // Stores unique corrections during the session
-
-    function hideAllPages() {
-      document.getElementById('setup-page').style.display = 'none';
-      document.getElementById('profile-page').style.display = 'none';
-      document.getElementById('tracker-page').style.display = 'none';
-      document.getElementById('summary-page').style.display = 'none';
-    }
-
-    function goToSetup() {
-      hideAllPages();
-      document.getElementById('setup-page').style.display = 'flex';
-    }
-
-    function goToProfile() {
-      hideAllPages();
-      currentFocus = document.getElementById('cameraFocus').value;
-      
-      document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
-      document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
-      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : currentFocus === "lower" ? "Lower Body" : "Full Body";
-      document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
-      
-      document.getElementById('profile-page').style.display = 'flex';
-      document.getElementById('profile-page').style.flexDirection = 'column';
-    }
-
-    let cameraStarted = false;
-    function goToTracker() {
-      hideAllPages();
-      document.getElementById('tracker-page').style.display = 'flex';
-      gatheredFeedback.clear(); // Reset past notes for a fresh run
-      if (!cameraStarted) {
-        camera.start();
-        cameraStarted = true;
-      }
-    }
-
-    function goToEndSession() {
-      hideAllPages();
-      const summaryList = document.getElementById('summaryFeedbackList');
-      summaryList.innerHTML = "";
-
-      if (gatheredFeedback.size === 0) {
-        summaryList.innerHTML = "<li>✨ Perfect execution! No critical alignment errors were triggered during this practice run.</li>";
-      } else {
-        gatheredFeedback.forEach(item => {
-          summaryList.innerHTML += `<li>${item}</li>`;
-        });
-      }
-      document.getElementById('summary-page').style.display = 'flex';
-    }
-
-    // --- AI MATH & SHAPE RECOGNITION ---
-    const videoElement = document.getElementsByClassName('input_video')[0];
-    const canvasElement = document.getElementsByClassName('output_canvas')[0];
-    const canvasCtx = canvasElement.getContext('2d');
-    
-    const feedbackText = document.getElementById('feedback');
-    const armFeedbackText = document.getElementById('armFeedback');
-    const detectedPositionBadge = document.getElementById('detectedPosition');
-
-    function calculateAngle(a, b, c) {
-      let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-      let angle = Math.abs(radians * 180.0 / Math.PI);
-      if (angle > 180.0) angle = 360 - angle;
-      return angle;
-    }
-
-    function onResults(results) {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
-      canvasCtx.translate(canvasElement.width, 0);
-      canvasCtx.scale(-1, 1);
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-      if (results.poseLandmarks) {
-        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
-
-        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
-        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
-
-        let leftWrist = results.poseLandmarks[15];
-        let rightWrist = results.poseLandmarks[16];
-        let leftElbow = results.poseLandmarks[13];
-        let rightElbow = results.poseLandmarks[14];
-        let leftShoulder = results.poseLandmarks[11];
-        let rightShoulder = results.poseLandmarks[12];
-        let leftAnkle = results.poseLandmarks[27];
-        let rightAnkle = results.poseLandmarks[28];
-
-        // 1. FRAME VISIBILITY VALIDATION
-        let visibilityIssue = false;
-        if (currentFocus === "upper" && (leftWrist.visibility < 0.5 || rightWrist.visibility < 0.5)) visibilityIssue = true;
-        if (currentFocus === "lower" && (leftAnkle.visibility < 0.5 || rightAnkle.visibility < 0.5)) visibilityIssue = true;
-        if (currentFocus === "full" && (leftWrist.visibility < 0.5 || leftAnkle.visibility < 0.5)) visibilityIssue = true;
-
-        if (visibilityIssue) {
-          feedbackText.innerHTML = `<span class='error-text'>⚠️ Target frame blocked! Readjust so your ${currentFocus} body is visible in the mirror feed.</span>`;
-          armFeedbackText.innerText = "";
-          canvasCtx.restore();
-          return;
-        }
-
-        // 2. ARM CURVATURE & HEIGHT BALANCING ANALYSIS
-        let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-        let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
-        let armStatus = [];
-
-        // Height mismatch check
-        if (Math.abs(leftWrist.y - rightWrist.y) > 0.07) {
-          let errorMsg = "One arm is riding higher up than the other. Level your shoulders and wrists!";
-          armStatus.push(errorMsg);
-          gatheredFeedback.add(errorMsg);
-        }
-
-        if (leftAngle > 162) {
-          armStatus.push("Left elbow is locked straight.");
-          gatheredFeedback.add("Soften your left elbow to keep a classical, fluid curve.");
-        } else if (leftAngle < 125) {
-          armStatus.push("Left elbow is too sharply bent.");
-          gatheredFeedback.add("Avoid dropping or over-bending the left elbow.");
-        }
-        
-        if (rightAngle > 162) {
-          armStatus.push("Right elbow is locked straight.");
-          gatheredFeedback.add("Soften your right elbow to keep a classical, fluid curve.");
-        } else if (rightAngle < 125) {
-          armStatus.push("Right elbow is too sharply bent.");
-          gatheredFeedback.add("Avoid dropping or over-bending the right elbow.");
-        }
-
-        if (armStatus.length === 0) {
-          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and elongate out through your fingers.";
-        } else {
-          armFeedbackText.innerText = armStatus.join(" ") + " Keep fingers soft and expressive.";
-        }
-
-        // 3. ENHANCED POSITION IDENTIFIER
-        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
-        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-        
-        let leftHigh = leftWrist.y < avgShoulderY - 0.15;
-        let rightHigh = rightWrist.y < avgShoulderY - 0.15;
-        let leftMid = leftWrist.y >= avgShoulderY - 0.15 && leftWrist.y <= avgShoulderY + 0.12;
-        let rightMid = rightWrist.y >= avgShoulderY - 0.15 && rightWrist.y <= avgShoulderY + 0.12;
-        let leftLow = leftWrist.y > avgShoulderY + 0.12;
-        let rightLow = rightWrist.y > avgShoulderY + 0.12;
-
-        // Symmetric Stances
-        if (leftHigh && rightHigh) {
-          if (wristDistance < 0.22) {
-            detectedPositionBadge.innerText = "5th Position";
-            feedbackText.innerText = "Frame your face nicely. Pull your shoulders down away from your ears.";
-          } else {
-            detectedPositionBadge.innerText = "Open 5th Position";
-            feedbackText.innerText = "Keep the breathing space up high. Ensure hands do not drop back past your peripheral vision.";
-          }
-        } 
-        else if (leftMid && rightMid) {
-          if (wristDistance > 0.48) {
-            detectedPositionBadge.innerText = "2nd Position";
-            feedbackText.innerText = "Support from the upper back. Slope the line down subtly from shoulder to fingertip.";
-          } else if (wristDistance < 0.25) {
-            detectedPositionBadge.innerText = "1st Position";
-            feedbackText.innerText = "Create an active circle opposite your sternum. Do not let hands overlap.";
-          } else {
-            detectedPositionBadge.innerText = "Demi-Seconde";
-            feedbackText.innerText = "Halfway setting. Maintain long, low lines floating off the hips.";
-          }
-        } 
-        else if (leftLow && rightLow) {
-          detectedPositionBadge.innerText = "Bras Bas";
-          feedbackText.innerText = "Preparatory resting curve. Keep your hands well forward of your thighs, keeping the oval round.";
-        }
-        // Asymmetric/Hybrid Configurations (3rd and 4th Variations)
-        else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
-          detectedPositionBadge.innerText = "3rd Position";
-          feedbackText.innerText = "Coordinate carefully. One arm frames the upper crown while the other supports the side.";
-        }
-        else if ((leftHigh && rightLow) || (rightHigh && leftLow)) {
-          detectedPositionBadge.innerText = "Open 4th Position";
-          feedbackText.innerText = "Keep the high arm lifted and forward while the lower arm stays dropped in a safe curve.";
-        }
-        else if ((leftMid && rightLow) || (rightMid && leftLow)) {
-          detectedPositionBadge.innerText = "4th Position (En Avant)";
-          feedbackText.innerText = "Keep your forward arm steady in front of your ribcage while the lower arm holds its frame.";
-        }
-        else {
-          detectedPositionBadge.innerText = "Transitioning...";
-          feedbackText.innerText = "Holding transitional carriage. Steady your core alignment.";
-        }
-      }
-      canvasCtx.restore();
-    }
-
-    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-    pose.onResults(onResults);
-
-    const camera = new Camera(videoElement, {
-      onFrame: async () => { await pose.send({image: videoElement}); },
-      width: 640, height: 480
-    });
-  </script>
-
-</body>
-</html>
+      <option value="

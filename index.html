@@ -253,7 +253,7 @@
     <div class="feedback-panel">
       <h2>Live Feedback</h2>
       <div class="status-badge" id="detectedPosition">Detecting...</div>
-      <div class="feedback-text" id="feedback">Loading your mirror...</div>
+      <div class="feedback-text" id="feedback">Initializing camera mirror...</div>
       <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
       
       <div class="btn-group" style="margin-top: 30px;">
@@ -306,21 +306,24 @@
 
     let cameraStarted = false;
     function goToTracker() {
+      // 1. INSTANTLY flip the UI layout without waiting for anything else
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
       positionHistory = {}; 
       
-      // Fixed: Prevent camera initialization lock-ups from blocking the view transition
-      setTimeout(() => {
+      // 2. Offload the camera initialization safely to an isolated async block
+      setTimeout(async () => {
         if (!cameraStarted && typeof camera !== 'undefined') {
           try {
-            camera.start();
+            await camera.start();
             cameraStarted = true;
+            document.getElementById('feedback').innerText = "Mirror connected! Assume a position to begin tracking.";
           } catch(e) {
-            console.error("Camera failed to start:", e);
+            console.error("Camera engine error:", e);
+            document.getElementById('feedback').innerText = "Camera setup timed out. Please verify camera permissions in your browser bar.";
           }
         }
-      }, 50);
+      }, 10);
     }
 
     function goToEndSession() {
@@ -503,4 +506,41 @@
           feedbackText.innerText = "One arm high, one arm out to the side (2nd). Lift out of your ribcage.";
         } else if (currentPosName === "1st Position") {
           feedbackText.innerText = "Maintain an active oval circle opposite your sternum. Support from the under-arms.";
-        } else if (
+        } else if (currentPosName === "2nd Position") {
+          feedbackText.innerText = "Slope the line down smoothly from the shoulder down to the wrist. Never let elbows drop.";
+        } else if (currentPosName === "Bras Bas") {
+          feedbackText.innerText = "Preparatory curve. Keep hands suspended forward away from your hips to preserve space.";
+        } else {
+          feedbackText.innerText = "Transitioning smoothly. Maintain your core posture and hold your head high.";
+        }
+
+        detectedPositionBadge.innerText = currentPosName;
+
+        if (currentPosName !== "Transitioning...") {
+          if (!positionHistory[currentPosName]) {
+            positionHistory[currentPosName] = new Set();
+          }
+          currentFrameErrors.forEach(err => positionHistory[currentPosName].add(err));
+        }
+
+        if (currentFrameErrors.length === 0) {
+          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and elongate through your fingers.";
+        } else {
+          armFeedbackText.innerText = currentFrameErrors.join(" ");
+        }
+      }
+      canvasCtx.restore();
+    }
+
+    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => { await pose.send({image: videoElement}); },
+      width: 640, height: 480
+    });
+  </script>
+
+</body>
+</html>

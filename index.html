@@ -308,7 +308,7 @@
     function goToTracker() {
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
-      positionHistory = {}; // Clean session logs for a new run
+      positionHistory = {}; 
       if (!cameraStarted) {
         camera.start();
         cameraStarted = true;
@@ -327,7 +327,7 @@
       } else {
         trackedPositions.forEach(pos => {
           let blockHTML = `<div class='summary-block'><h3>${pos}</h3><ul>`;
-          let errors = Array.from(positionHistory[pos]); // Convert Set to Array to avoid repeats
+          let errors = Array.from(positionHistory[pos]); 
           
           if (errors.length === 0) {
             blockHTML += `<li>✨ Perfect alignment kept throughout! Great form.</li>`;
@@ -379,127 +379,30 @@
         let rightElbow = results.poseLandmarks[14];
         let leftShoulder = results.poseLandmarks[11];
         let rightShoulder = results.poseLandmarks[12];
+        let leftHip = results.poseLandmarks[23];
+        let rightHip = results.poseLandmarks[24];
 
-        // RAW GEOMETRIC CHECKS
+        // --- DYNAMIC NORMALIZATION UNIT ---
+        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        let avgHipY = (leftHip.y + rightHip.y) / 2;
+        let torsoHeight = Math.max(0.1, Math.abs(avgHipY - avgShoulderY)); 
+        let bodyCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+
         let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
         let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
         let currentFrameErrors = [];
 
-        // Height Mismatch
-        if (Math.abs(leftWrist.y - rightWrist.y) > 0.08) {
-          currentFrameErrors.push("One arm is higher up than the other. Level your frame.");
-        }
-        
-        // Curvature Deficiencies (except in Arabesque where elbows are straighter)
-        let isLeftExtended = leftAngle > 140;
-        let isRightExtended = rightAngle > 140;
-
-        if (!isLeftExtended && leftAngle < 125) currentFrameErrors.push("Left elbow is dropped or over-bent.");
-        if (!isRightExtended && rightAngle < 125) currentFrameErrors.push("Right elbow is dropped or over-bent.");
-
-        // CORE MATH GRID
-        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
-        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-        let currentPosName = "Transitioning...";
-
-        let leftHigh = leftWrist.y < avgShoulderY - 0.12;
-        let rightHigh = rightWrist.y < avgShoulderY - 0.12;
-        let leftMid = leftWrist.y >= avgShoulderY - 0.12 && leftWrist.y <= avgShoulderY + 0.12;
-        let rightMid = rightWrist.y >= avgShoulderY - 0.12 && rightWrist.y <= avgShoulderY + 0.12;
-        let leftLow = leftWrist.y > avgShoulderY + 0.12;
-        let rightLow = rightWrist.y > avgShoulderY + 0.12;
-
-        let leftNarrow = Math.abs(leftWrist.x - leftShoulder.x) < 0.15;
-        let rightNarrow = Math.abs(rightWrist.x - rightShoulder.x) < 0.15;
-
-        // ARABESQUE LINE DETECTION
-        let bothSameSide = (leftWrist.x < rightShoulder.x && rightWrist.x < rightShoulder.x) || (leftWrist.x > leftShoulder.x && rightWrist.x > leftShoulder.x);
-
-        if (isLeftExtended && isRightExtended) {
-          if (bothSameSide) {
-            if (Math.abs(leftWrist.y - rightWrist.y) < 0.15) {
-              currentPosName = "3rd Arabesque Line";
-              feedbackText.innerText = "Both arms extended forward. Ensure your shoulders stay pressed down.";
-            } else {
-              currentPosName = "4th Arabesque Line";
-              feedbackText.innerText = "Deep cross line. Keep energy projecting out through your back.";
-            }
-          } else if (wristDistance > 0.5 && (leftMid || leftHigh) && (rightMid || rightHigh)) {
-            if (Math.abs(leftWrist.y - rightWrist.y) > 0.1) {
-              currentPosName = "1st Arabesque Line";
-              feedbackText.innerText = "Highest arm forward, opposite arm extending side/back. Lift your chest.";
-            } else {
-              currentPosName = "2nd Arabesque Line";
-              feedbackText.innerText = "Squared shoulders, opposite arm forward. Keep the line long.";
-            }
-          }
+        // --- HIGH ACCURACY ERROR ANALYSIS ---
+        // 1. Shoulder Level Validation
+        if (Math.abs(leftShoulder.y - rightShoulder.y) > 0.04 * torsoHeight) {
+          currentFrameErrors.push("Shoulders are uneven. Pull your shoulder blades down and square the collarbones.");
         }
 
-        // STANDARD POSITIONS
-        if (currentPosName === "Transitioning..." || !currentPosName.includes("Arabesque")) {
-          // If arms aren't intentionally extended, check for locked elbows
-          if (leftAngle > 162 && !currentPosName.includes("Arabesque")) currentFrameErrors.push("Left elbow is locked too straight.");
-          if (rightAngle > 162 && !currentPosName.includes("Arabesque")) currentFrameErrors.push("Right elbow is locked too straight.");
+        // 2. Wrist Height Asymmetry Check
+        let verticalWristDiff = Math.abs(leftWrist.y - rightWrist.y);
 
-          if (leftHigh && rightHigh) {
-            currentPosName = (wristDistance < 0.22) ? "5th Position" : "Open 5th Position";
-          } 
-          else if (leftMid && rightMid) {
-            if (wristDistance > 0.48) currentPosName = "2nd Position";
-            else if (wristDistance < 0.24) currentPosName = "1st Position";
-            else currentPosName = "Demi-Seconde";
-          } 
-          else if (leftLow && rightLow && wristDistance < 0.26) {
-            currentPosName = "Bras Bas";
-          }
-          else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
-            // Distinguish 3rd vs 4th based on how narrow the mid-level arm is
-            let midArmNarrow = (leftMid && leftNarrow) || (rightMid && rightNarrow);
-            currentPosName = midArmNarrow ? "4th Position" : "3rd Position";
-          }
-          else if ((leftMid && rightLow) || (rightMid && leftLow)) {
-            currentPosName = "Open 4th Position";
-          }
-
-          // Update standard position text
-          if (currentPosName === "5th Position") feedbackText.innerText = "Frame your face nicely. Drop shoulder blades down your back.";
-          else if (currentPosName === "Open 5th Position") feedbackText.innerText = "Keep the breathing space up high. Ensure hands do not drop back.";
-          else if (currentPosName === "2nd Position") feedbackText.innerText = "Support from the upper back. Slope the line down subtly.";
-          else if (currentPosName === "1st Position") feedbackText.innerText = "Maintain an active oval circle opposite your sternum.";
-          else if (currentPosName === "Bras Bas") feedbackText.innerText = "Preparatory resting curve. Keep hands clear of your thighs.";
-          else if (currentPosName === "3rd Position") feedbackText.innerText = "One arm high, one arm out to the side. Connect your center.";
-          else if (currentPosName === "4th Position") feedbackText.innerText = "One arm high, one arm curved in front. Keep the box of your hips square.";
-        }
-
-        detectedPositionBadge.innerText = currentPosName;
-
-        // SUMMARY LOGGING
-        if (currentPosName !== "Transitioning...") {
-          if (!positionHistory[currentPosName]) {
-            positionHistory[currentPosName] = new Set();
-          }
-          currentFrameErrors.forEach(err => positionHistory[currentPosName].add(err));
-        }
-
-        // LIVE UI TEXT
-        if (currentFrameErrors.length === 0) {
-          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and extend naturally.";
-        } else {
-          armFeedbackText.innerText = currentFrameErrors.join(" ");
-        }
-      }
-      canvasCtx.restore();
-    }
-
-    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-    pose.onResults(onResults);
-
-    const camera = new Camera(videoElement, {
-      onFrame: async () => { await pose.send({image: videoElement}); },
-      width: 640, height: 480
-    });
-  </script>
-
-</body>
-</html>
+        // 3. Normalized Height Coordinates
+        let leftHigh = leftWrist.y < avgShoulderY - (0.22 * torsoHeight);
+        let rightHigh = rightWrist.y < avgShoulderY - (0.22 * torsoHeight);
+        let leftMid = leftWrist.y >= avgShoulderY - (0.22 * torsoHeight) && leftWrist.y <= avgShoulderY + (0.20 * torsoHeight);
+        let rightMid = rightWrist.y >= avgShoulderY - (0.22 * torsoHeight) && rightWrist.y <=

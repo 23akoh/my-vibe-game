@@ -1,337 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Void Runner</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden; /* Stops scrolling */
-            background-color: #050510;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aesthetic Ballet AI Tracker</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
-        #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 0 0 10px #00ffff;
-            z-index: 10;
-        }
+  <style>
+    /* Aesthetic Pink & Purple Pastel Theme */
+    body {
+      background: linear-gradient(135deg, #ffe4e1, #e6e6fa); /* MistyRose to Lavender */
+      font-family: 'Helvetica Neue', sans-serif;
+      color: #6a5acd; /* SlateBlue */
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
 
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: #888;
-            font-size: 14px;
-            z-index: 10;
-        }
+    h1 {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
 
-        .key {
-            background: #222;
-            padding: 3px 8px;
-            border-radius: 4px;
-            color: #00ffff;
-            border: 1px solid #00ffff;
-        }
+    p {
+      color: #7b68ee;
+      font-size: 1.1em;
+      margin-bottom: 30px;
+    }
 
-        #game-over-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(5, 5, 16, 0.85);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-        }
+    /* Container to overlap video and canvas */
+    .tracker-container {
+      position: relative;
+      display: inline-block;
+      border: 8px solid #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(106, 90, 205, 0.2);
+      overflow: hidden;
+      background-color: #fff;
+    }
 
-        #game-over-screen h1 {
-            color: #ff0055;
-            font-size: 50px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 20px #ff0055;
-            letter-spacing: 3px;
-        }
+    /* Mirror the video so it acts like a studio mirror */
+    .input_video {
+      display: block;
+      transform: scaleX(-1);
+      width: 640px;
+      height: 480px;
+      object-fit: cover;
+    }
 
-        button {
-            background: transparent;
-            color: #00ffff;
-            border: 2px solid #00ffff;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 20px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-            transition: all 0.2s;
-        }
+    /* Put the canvas exactly over the video */
+    .output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: scaleX(-1);
+      width: 640px;
+      height: 480px;
+    }
 
-        button:hover {
-            background: #00ffff;
-            color: #000;
-        }
-    </style>
+    /* Loading message */
+    #loading {
+      font-weight: bold;
+      color: #ff69b4; /* HotPink */
+    }
+  </style>
 </head>
 <body>
 
-    <div id="ui-layer">Score: <span id="scoreVal">0</span></div>
-    
-    <div id="controls">
-        <span class="key">LEFT / RIGHT</span> to move | <span class="key">SPACEBAR</span> to jump
-    </div>
+  <h1>Virtual Ballet Coach</h1>
+  <p>Stand back and let the AI map your alignment.</p>
+  <div id="loading">Loading camera and AI model... Please allow camera access.</div>
 
-    <div id="game-over-screen">
-        <h1>YOU FELL</h1>
-        <p style="color: #aaa; font-size: 18px;">Watch your step in the void.</p>
-        <button onclick="resetGame()">Run Again</button>
-    </div>
+  <div class="tracker-container">
+    <video class="input_video" autoplay playsinline></video>
+    <canvas class="output_canvas" width="640" height="480"></canvas>
+  </div>
 
-    <script>
-        // 1. Scene, Camera, and Renderer Setup
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050510, 0.015); // Adds deep space fade-out
+  <script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    const loadingText = document.getElementById('loading');
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // Position camera behind and slightly above the player
-        camera.position.set(0, 4, 8);
-        camera.lookAt(0, 0, -10);
+    // This function runs every time the AI detects a pose
+    function onResults(results) {
+      // Hide the loading text once the camera is running
+      loadingText.style.display = 'none';
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+      // Clear the canvas for the new frame
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-        // 2. Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x00ffff, 1.5, 50);
-        pointLight.position.set(0, 5, 0);
-        scene.add(pointLight);
-
-        // 3. Player Character (A glowing cube)
-        const playerGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-        const playerMat = new THREE.MeshStandardMaterial({ 
-            color: 0x00ffff, 
-            emissive: 0x008888,
-            roughness: 0.2
-        });
-        const player = new THREE.Mesh(playerGeo, playerMat);
-        scene.add(player);
-
-        // 4. Track Generation Variables
-        const platforms = [];
-        const laneWidth = 1.5;
-        const tileLength = 2.5;
-        const numLanes = 5; // Lanes: -2, -1, 0, 1, 2
+      // Draw the connections (bones) and landmarks (joints)
+      if (results.poseLandmarks) {
+        // Draw the lines connecting the joints in a pretty pastel pink
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+                       {color: '#ffb6c1', lineWidth: 4}); // LightPink
         
-        let speed = 0.35;
-        let score = 0;
-        let distanceTraveled = 0;
+        // Draw the dots for the joints in purple
+        drawLandmarks(canvasCtx, results.poseLandmarks,
+                      {color: '#9370db', lineWidth: 2, radius: 4}); // MediumPurple
+      }
+      canvasCtx.restore();
+    }
 
-        // Materials for the platforms
-        const tileGeo = new THREE.BoxGeometry(laneWidth - 0.1, 0.2, tileLength);
-        const tileMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-        const edgeMat = new THREE.LineBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.5 });
+    // Set up the MediaPipe Pose AI
+    const pose = new Pose({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    }});
+    
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    
+    pose.onResults(onResults);
 
-        function createTile(lane, z) {
-            const tile = new THREE.Mesh(tileGeo, tileMat);
-            tile.position.set(lane * laneWidth, 0, z);
+    // Set up the webcam
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await pose.send({image: videoElement});
+      },
+      width: 640,
+      height: 480
+    });
+    
+    camera.start();
+  </script>
 
-            // Add glowing Tron-style borders to the tiles
-            const edges = new THREE.EdgesGeometry(tileGeo);
-            const line = new THREE.LineSegments(edges, edgeMat);
-            tile.add(line);
-
-            scene.add(tile);
-            platforms.push(tile);
-        }
-
-        function generateInitialTrack() {
-            // Build the track from behind the camera all the way into the fog
-            for (let z = 10; z > -120; z -= tileLength) {
-                if (z > -20) {
-                    // Safe zone at the start (no gaps)
-                    for(let i = -2; i <= 2; i++) createTile(i, z);
-                } else {
-                    // Randomly leave gaps
-                    let gapCount = 0;
-                    for(let i = -2; i <= 2; i++) {
-                        if (Math.random() > 0.3) { // 70% chance to spawn a tile
-                            createTile(i, z);
-                        } else {
-                            gapCount++;
-                        }
-                    }
-                    // Prevent impossible jumps where all 5 lanes are missing
-                    if (gapCount === 5) createTile(Math.floor(Math.random() * 5) - 2, z);
-                }
-            }
-        }
-
-        // 5. Physics and Controls
-        let playerVy = 0;
-        const gravity = -0.025;
-        const jumpForce = 0.45;
-        let isGrounded = false;
-        let gameOver = false;
-        let animationId;
-
-        const keys = {};
-        window.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            if (e.code === 'Space' && isGrounded && !gameOver) {
-                playerVy = jumpForce;
-                isGrounded = false;
-            }
-            if (e.code === 'Space' && gameOver) {
-                resetGame();
-            }
-        });
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
-
-        // Handle window resizing
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // 6. Game Loop
-        function resetGame() {
-            cancelAnimationFrame(animationId);
-            
-            // Delete old platforms
-            platforms.forEach(p => scene.remove(p));
-            platforms.length = 0;
-            
-            generateInitialTrack();
-            player.position.set(0, 0.5, 0); // Reset player position
-            player.rotation.set(0, 0, 0);
-            
-            playerVy = 0;
-            score = 0;
-            speed = 0.35;
-            distanceTraveled = 0;
-            gameOver = false;
-            
-            document.getElementById('scoreVal').innerText = score;
-            document.getElementById('game-over-screen').style.display = 'none';
-            
-            animate();
-        }
-
-        function animate() {
-            if (gameOver) return;
-            animationId = requestAnimationFrame(animate);
-
-            // Left/Right Movement (X-axis)
-            let moveX = 0;
-            if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 0.18;
-            if (keys['ArrowRight'] || keys['KeyD']) moveX += 0.18;
-            player.position.x += moveX;
-
-            // Constrain player to the edges of the track
-            const limit = 2.4 * laneWidth;
-            if (player.position.x > limit) player.position.x = limit;
-            if (player.position.x < -limit) player.position.x = -limit;
-
-            // Move the world towards the camera (Z-axis)
-            for (let i = platforms.length - 1; i >= 0; i--) {
-                const p = platforms[i];
-                p.position.z += speed;
-
-                // Remove tiles that have passed the camera
-                if (p.position.z > 15) {
-                    scene.remove(p);
-                    platforms.splice(i, 1);
-                }
-            }
-
-            // Spawn new tiles in the distance
-            distanceTraveled += speed;
-            if (distanceTraveled >= tileLength) {
-                distanceTraveled -= tileLength;
-                
-                let gapCount = 0;
-                for(let i = -2; i <= 2; i++) {
-                    if (Math.random() > 0.35) {
-                        createTile(i, -120);
-                    } else {
-                        gapCount++;
-                    }
-                }
-                if (gapCount === 5) createTile(Math.floor(Math.random() * 5) - 2, -120);
-            }
-
-            // Collision Detection (Checking if player is over a tile)
-            let onTrack = false;
-            // Only check for ground if falling
-            if (playerVy <= 0 && player.position.y >= 0.3 && player.position.y <= 0.8) {
-                for (const p of platforms) {
-                    const dx = Math.abs(p.position.x - player.position.x);
-                    const dz = Math.abs(p.position.z - player.position.z);
-                    
-                    // If within the bounds of a platform block
-                    if (dx < (laneWidth / 2 + 0.3) && dz < (tileLength / 2 + 0.3)) {
-                        onTrack = true;
-                        break;
-                    }
-                }
-            }
-
-            // Apply Gravity
-            if (onTrack) {
-                playerVy = 0;
-                player.position.y = 0.5; // Snap to top of the platform
-                isGrounded = true;
-            } else {
-                isGrounded = false;
-                playerVy += gravity;
-            }
-            player.position.y += playerVy;
-
-            // Add backflip animation when jumping for aesthetics
-            if (!isGrounded) {
-                player.rotation.x -= 0.1;
-            } else {
-                // Snap rotation back to flat when landed
-                player.rotation.x = 0; 
-                player.rotation.y = 0;
-            }
-
-            // Check Defeat Condition (Fell into the void)
-            if (player.position.y < -5) {
-                gameOver = true;
-                document.getElementById('game-over-screen').style.display = 'flex';
-            }
-
-            // Score and Difficulty Scaling
-            score++;
-            if (score % 10 === 0) {
-                document.getElementById('scoreVal').innerText = Math.floor(score / 10);
-            }
-            if (score % 500 === 0) speed += 0.02; // Slowly increase speed
-
-            renderer.render(scene, camera);
-        }
-
-        // Boot the game
-        generateInitialTrack();
-        resetGame();
-    </script>
 </body>
 </html>

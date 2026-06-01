@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Écarté.ai - Ballet Training</title>
+  <title>écarte.ai</title>
+  
+  <link rel="icon" type="image/jpeg" href="Red and Black Ballet Logo.jpg">
   
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
   
@@ -41,22 +43,13 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     .logo {
       width: 150px;
       border-radius: 10px;
       mix-blend-mode: multiply; 
-    }
-
-    h1 {
-      font-family: 'Cosmopolitan', 'Great Vibes', cursive; 
-      font-size: 3.5em;
-      font-weight: normal;
-      color: #333;
-      margin-top: 5px;
-      margin-bottom: 5px;
     }
 
     /* --- PAGE CONTAINERS --- */
@@ -69,7 +62,6 @@
       text-align: left;
     }
 
-    /* HARDCODING VISIBILITY SO IT DOESN'T GLITCH */
     #setup-page { display: flex; flex-direction: column; }
     #profile-page { display: none; }
     #tracker-page { display: none; width: auto; background: transparent; box-shadow: none; align-items: flex-start; gap: 20px; }
@@ -79,29 +71,18 @@
       font-weight: bold;
       color: #666;
       font-size: 0.9em;
-      margin-top: 10px;
+      margin-top: 12px;
       display: block;
     }
 
     input[type="text"], select {
       width: 90%;
-      padding: 10px;
-      margin: 5px 0 15px 0;
+      padding: 11px;
+      margin: 6px 0 16px 0;
       border: 1px solid #dcdcdc;
       border-radius: 10px;
       font-family: inherit;
       background-color: #fafafa;
-    }
-
-    #gradesContainer {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 15px;
-      max-height: 150px;
-      overflow-y: auto;
-      font-size: 0.9em;
-      color: #666;
     }
 
     .btn-group {
@@ -177,7 +158,7 @@
       font-size: 1em;
       line-height: 1.4;
       color: #555;
-      min-height: 80px;
+      min-height: 60px;
     }
     
     .arm-feedback {
@@ -187,13 +168,14 @@
       border-left: 3px solid #ff4d4d; 
       font-size: 0.9em;
     }
+
+    .error-text { color: #d9534f; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="header">
     <img src="Red and Black Ballet Logo.jpg" alt="Écarté.ai Logo" class="logo">
-    <h1>Écarté.ai</h1>
   </div>
 
   <div id="setup-page" class="page">
@@ -205,27 +187,22 @@
     <label>Method / School</label>
     <select id="danceMethod">
       <option value="Vaganova">Vaganova</option>
-      <option value="Balanchine">Balanchine</option>
       <option value="Cecchetti">Cecchetti</option>
+      <option value="Royal Academy of Dance (RAD)">Royal Academy of Dance (RAD)</option>
+      <option value="Balanchine">Balanchine</option>
       <option value="French School">French School</option>
       <option value="Bournonville">Bournonville</option>
     </select>
 
-    <label>Exam Board (Optional)</label>
-    <input list="boards" id="boardInput" placeholder="Type your Exam Board (e.g. RAD)" onchange="updateGrades()">
-    <datalist id="boards">
-      <option value="RAD (Royal Academy of Dance)">
-      <option value="ISTD (Imperial Society)">
-      <option value="IDTA (International Dance Teachers)">
-      <option value="BBO (bbodance)">
-      <option value="ABD (Associated Board of Dance)">
-    </datalist>
-
-    <div id="gradesContainer">
-      </div>
+    <label>Camera Focus Area</label>
+    <select id="cameraFocus">
+      <option value="upper" selected>Upper Body (Arms, Back, Head)</option>
+      <option value="lower">Lower Body (Legs, Feet)</option>
+      <option value="full">Full Body</option>
+    </select>
 
     <label>Your Focus / Goals</label>
-    <input type="text" id="userGoals" placeholder="E.g. Better turnout, softer arms...">
+    <input type="text" id="userGoals" placeholder="E.g. Extended lines, softer fingers...">
     
     <div class="btn-group" style="justify-content: flex-end;">
       <button onclick="goToProfile()">Next ➔</button>
@@ -236,7 +213,7 @@
     <h2>Dancer Dashboard</h2>
     <p><strong>Name:</strong> <span id="display-name"></span></p>
     <p><strong>Method:</strong> <span id="display-method"></span></p>
-    <p><strong>Exam Board:</strong> <span id="display-board"></span></p>
+    <p><strong>Tracking Focus:</strong> <span id="display-focus"></span></p>
     <p><strong>Goals:</strong> <span id="display-goals"></span></p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
     
@@ -265,28 +242,9 @@
   </div>
 
   <script>
-    // --- EXAM BOARD LOGIC ---
-    const syllabusData = {
-      "RAD (Royal Academy of Dance)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Intermediate Foundation", "Intermediate", "Advanced Foundation", "Advanced 1", "Advanced 2"],
-      "ISTD (Imperial Society)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Intermediate Foundation", "Intermediate", "Advanced 1", "Advanced 2"],
-      "IDTA (International Dance Teachers)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate", "Advanced 1", "Advanced 2"],
-      "BBO (bbodance)": ["Pre-Syllabus", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate Foundation", "Intermediate"],
-      "ABD (Associated Board of Dance)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Majors"]
-    };
-
-    function updateGrades() {
-      const board = document.getElementById('boardInput').value;
-      const container = document.getElementById('gradesContainer');
-      container.innerHTML = ""; 
-
-      if (syllabusData[board]) {
-        syllabusData[board].forEach(grade => {
-          container.innerHTML += `<label style="margin-top:0; font-weight:normal;"><input type="checkbox" value="${grade}"> ${grade}</label>`;
-        });
-      }
-    }
-
     // --- NAVIGATION LOGIC ---
+    let currentFocus = "upper";
+
     function hideAllPages() {
       document.getElementById('setup-page').style.display = 'none';
       document.getElementById('profile-page').style.display = 'none';
@@ -300,9 +258,11 @@
 
     function goToProfile() {
       hideAllPages();
+      currentFocus = document.getElementById('cameraFocus').value;
+      
       document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
       document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
-      document.getElementById('display-board').innerText = document.getElementById('boardInput').value || "None";
+      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : currentFocus === "lower" ? "Lower Body" : "Full Body";
       document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
       
       document.getElementById('profile-page').style.display = 'flex';
@@ -320,7 +280,7 @@
       }
     }
 
-    // --- AI MATH & LOGIC ---
+    // --- AI MATH & POSITION LOGIC ---
     const videoElement = document.getElementsByClassName('input_video')[0];
     const canvasElement = document.getElementsByClassName('output_canvas')[0];
     const canvasCtx = canvasElement.getContext('2d');
@@ -345,8 +305,10 @@
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
+        // Hide distracting facial tracking points
         for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
 
+        // Render clean structural lines matching your logo palette
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
         drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
 
@@ -356,41 +318,93 @@
         let rightElbow = results.poseLandmarks[14];
         let leftShoulder = results.poseLandmarks[11];
         let rightShoulder = results.poseLandmarks[12];
+        let leftAnkle = results.poseLandmarks[27];
+        let rightAnkle = results.poseLandmarks[28];
 
-        // 1. ARM ANGLES
+        // 1. DYNAMIC VISIBILITY FILTER
+        let visibilityIssue = false;
+        if (currentFocus === "upper" && (leftWrist.visibility < 0.5 || rightWrist.visibility < 0.5)) visibilityIssue = true;
+        if (currentFocus === "lower" && (leftAnkle.visibility < 0.5 || rightAnkle.visibility < 0.5)) visibilityIssue = true;
+        if (currentFocus === "full" && (leftWrist.visibility < 0.5 || leftAnkle.visibility < 0.5)) visibilityIssue = true;
+
+        if (visibilityIssue) {
+          feedbackText.innerHTML = `<span class='error-text'>⚠️ Target frame blocked! Readjust so your ${currentFocus} body is visible in the mirror feed.</span>`;
+          armFeedbackText.innerText = "";
+          canvasCtx.restore();
+          return;
+        }
+
+        // 2. STAGE-GRADE ARM CURVATURE ANALYSIS
         let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
         let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
         let armStatus = [];
 
-        if (leftAngle > 165) armStatus.push("Left arm is too straight.");
-        else if (leftAngle < 130) armStatus.push("Left arm is too bent.");
+        // Tightened thresholds to capture broken/drooping shapes or locked elbows
+        if (leftAngle > 162) armStatus.push("Left arm is too straight (soften the elbow).");
+        else if (leftAngle < 125) armStatus.push("Left arm is too sharply bent.");
         
-        if (rightAngle > 165) armStatus.push("Right arm is too straight.");
-        else if (rightAngle < 130) armStatus.push("Right arm is too bent.");
+        if (rightAngle > 162) armStatus.push("Right arm is too straight (soften the elbow).");
+        else if (rightAngle < 125) armStatus.push("Right arm is too sharply bent.");
 
-        if (armStatus.length === 0) armFeedbackText.innerText = "✨ Both arms have a beautiful curve! Remember to relax your thumbs and fingers.";
-        else armFeedbackText.innerText = armStatus.join(" ") + " Relax your fingers.";
+        if (armStatus.length === 0) {
+          armFeedbackText.innerText = "✨ Beautiful, seamless elongation. Soften your hands and extend naturally through your index fingers.";
+        } else {
+          armFeedbackText.innerText = armStatus.join(" ") + " Keep fingers soft and expressive, avoiding dropped thumbs.";
+        }
 
-        // 2. POSITIONS
+        // 3. ALL-POSITION POSITION ANALYZER
         let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
-        let leftHigh = leftWrist.y < leftShoulder.y;
-        let rightHigh = rightWrist.y < rightShoulder.y;
+        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        
+        let leftHigh = leftWrist.y < avgShoulderY - 0.12;
+        let rightHigh = rightWrist.y < avgShoulderY - 0.12;
+        let leftMid = leftWrist.y >= avgShoulderY - 0.12 && leftWrist.y <= avgShoulderY + 0.15;
+        let rightMid = rightWrist.y >= avgShoulderY - 0.12 && rightWrist.y <= avgShoulderY + 0.15;
+        let leftLow = leftWrist.y > avgShoulderY + 0.15;
+        let rightLow = rightWrist.y > avgShoulderY + 0.15;
 
-        if (leftHigh && rightHigh && wristDistance < 0.3) {
-          detectedPositionBadge.innerText = "5th Position";
-          feedbackText.innerText = "Keep your shoulders down. Frame your face, don't hide it!";
+        // Symmetric Positions
+        if (leftHigh && rightHigh) {
+          if (wristDistance < 0.28) {
+            detectedPositionBadge.innerText = "5th Position (En Haut)";
+            feedbackText.innerText = "Frame your face without lifting the shoulders. Drop your shoulder blades down your back.";
+          } else {
+            detectedPositionBadge.innerText = "Open 5th / High V";
+            feedbackText.innerText = "Keep the extension conversational. Breathe out through the palms.";
+          }
         } 
-        else if (!leftHigh && !rightHigh && wristDistance > 0.4) {
-          detectedPositionBadge.innerText = "2nd Position";
-          feedbackText.innerText = "Support from the back. Imagine water running down your shoulders to your fingertips.";
+        else if (leftMid && rightMid) {
+          if (wristDistance > 0.48) {
+            detectedPositionBadge.innerText = "2nd Position";
+            feedbackText.innerText = "Keep elbows supported from underneath. Slope the line down gently from the shoulder to the wrist.";
+          } else if (wristDistance < 0.25) {
+            detectedPositionBadge.innerText = "1st Position (En Avant)";
+            feedbackText.innerText = "Maintain a rounded shape in front of your sternum. Imagine holding a fragile vase.";
+          } else {
+            detectedPositionBadge.innerText = "Demi-Seconde";
+            feedbackText.innerText = "Halfway between 1st and 2nd. Keep the line relaxed and sloping down.";
+          }
         } 
-        else if (!leftHigh && !rightHigh && wristDistance < 0.25) {
-          detectedPositionBadge.innerText = "1st Position";
-          feedbackText.innerText = "Hold the beach ball in front of your navel. No tension in the hands.";
+        else if (leftLow && rightLow && wristDistance < 0.25) {
+          detectedPositionBadge.innerText = "Bras Bas (En Bas)";
+          feedbackText.innerText = "Preparatory stance. Create a clean oval shape, keeping your hands well forward of your thighs.";
+        }
+        // Asymmetric Positions (3rd / 4th Variations)
+        else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
+          detectedPositionBadge.innerText = "3rd Position";
+          feedbackText.innerText = "Coordinate the lines cleanly. The high arm frames the head while the side arm supports from behind.";
+        }
+        else if ((leftHigh && rightLow) || (rightHigh && leftLow)) {
+          detectedPositionBadge.innerText = "4th Position (En Haut)";
+          feedbackText.innerText = "Ensure your forward arm remains rounded and doesn't pull behind your center line.";
+        }
+        else if ((leftMid && rightLow) || (rightMid && leftLow)) {
+          detectedPositionBadge.innerText = "4th Position (En Avant)";
+          feedbackText.innerText = "Check your spacing. One arm remains steady in 1st while the other completes the low frame.";
         }
         else {
-          detectedPositionBadge.innerText = "Tracking...";
-          feedbackText.innerText = "Move into 1st, 2nd, or 5th position.";
+          detectedPositionBadge.innerText = "Transitioning...";
+          feedbackText.innerText = "Holding a transition line. Ground your stance and extend your crown.";
         }
       }
       canvasCtx.restore();

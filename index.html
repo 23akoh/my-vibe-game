@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>écarte.ai</title>
-  
-  <link rel="icon" type="image/jpeg" href="Red and Black Ballet Logo.jpg">
+  <title>Écarté.ai</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
   
@@ -33,7 +31,7 @@
       content: "";
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      opacity: 0.03;
+      opacity: 0.02;
       background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><path d="M50 10 Q60 40 80 50 Q60 60 50 90 Q40 60 20 50 Q40 40 50 10 Z" fill="none" stroke="black" stroke-width="2"/></svg>');
       pointer-events: none;
       z-index: -1;
@@ -46,10 +44,19 @@
       margin-bottom: 25px;
     }
 
-    .logo {
-      width: 150px;
-      border-radius: 10px;
-      mix-blend-mode: multiply; 
+    /* Minimalist Ballerina Line Drawing */
+    .ballerina-icon {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Cosmopolitan', 'Great Vibes', cursive; 
+      font-size: 3.5em;
+      font-weight: normal;
+      color: #333;
+      margin: 0;
     }
 
     /* --- PAGE CONTAINERS --- */
@@ -65,6 +72,7 @@
     #setup-page { display: flex; flex-direction: column; }
     #profile-page { display: none; }
     #tracker-page { display: none; width: auto; background: transparent; box-shadow: none; align-items: flex-start; gap: 20px; }
+    #summary-page { display: none; flex-direction: column; }
 
     /* --- INPUTS & BUTTONS --- */
     label {
@@ -169,13 +177,29 @@
       font-size: 0.9em;
     }
 
+    .summary-list {
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+
+    .summary-list li {
+      margin-bottom: 10px;
+      color: #555;
+    }
+
     .error-text { color: #d9534f; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <img src="Red and Black Ballet Logo.jpg" alt="Écarté.ai Logo" class="logo">
+    <svg class="ballerina-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 20 C53 20 55 23 53 26 C51 28 49 28 48 32 C47 36 53 45 56 55 C58 62 61 75 62 85 C60 85 58 80 56 72 C54 65 51 58 49 58 C47 58 44 65 42 72 C40 80 38 85 36 85 C37 75 40 62 42 55 C45 45 51 36 50 32 C49 28 47 28 45 26 C43 23 45 20 47 20 Z" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M48 35 C40 32 30 25 25 25 C27 28 35 35 44 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M52 35 C60 32 70 25 75 25 C73 28 65 35 56 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M35 58 C40 55 50 53 55 53 C60 53 62 56 65 58" fill="none" stroke="#ff4d4d" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <h1>Écarté.ai</h1>
   </div>
 
   <div id="setup-page" class="page">
@@ -236,19 +260,31 @@
       <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
       
       <div class="btn-group" style="margin-top: 30px;">
-        <button class="secondary" onclick="goToProfile()">End Session</button>
+        <button class="secondary" onclick="goToEndSession()">End Session</button>
       </div>
     </div>
   </div>
 
+  <div id="summary-page" class="page">
+    <h2>Session Summary</h2>
+    <p>Great work in the studio! Here is the technique feedback collected during your session:</p>
+    <ul id="summaryFeedbackList" class="summary-list">
+      </ul>
+    <div class="btn-group" style="justify-content: flex-end;">
+      <button onclick="goToProfile()">Return to Dashboard</button>
+    </div>
+  </div>
+
   <script>
-    // --- NAVIGATION LOGIC ---
+    // --- NAVIGATION & SUMMARY STORAGE ---
     let currentFocus = "upper";
+    let gatheredFeedback = new Set(); // Stores unique corrections during the session
 
     function hideAllPages() {
       document.getElementById('setup-page').style.display = 'none';
       document.getElementById('profile-page').style.display = 'none';
       document.getElementById('tracker-page').style.display = 'none';
+      document.getElementById('summary-page').style.display = 'none';
     }
 
     function goToSetup() {
@@ -273,14 +309,29 @@
     function goToTracker() {
       hideAllPages();
       document.getElementById('tracker-page').style.display = 'flex';
-      
+      gatheredFeedback.clear(); // Reset past notes for a fresh run
       if (!cameraStarted) {
         camera.start();
         cameraStarted = true;
       }
     }
 
-    // --- AI MATH & POSITION LOGIC ---
+    function goToEndSession() {
+      hideAllPages();
+      const summaryList = document.getElementById('summaryFeedbackList');
+      summaryList.innerHTML = "";
+
+      if (gatheredFeedback.size === 0) {
+        summaryList.innerHTML = "<li>✨ Perfect execution! No critical alignment errors were triggered during this practice run.</li>";
+      } else {
+        gatheredFeedback.forEach(item => {
+          summaryList.innerHTML += `<li>${item}</li>`;
+        });
+      }
+      document.getElementById('summary-page').style.display = 'flex';
+    }
+
+    // --- AI MATH & SHAPE RECOGNITION ---
     const videoElement = document.getElementsByClassName('input_video')[0];
     const canvasElement = document.getElementsByClassName('output_canvas')[0];
     const canvasCtx = canvasElement.getContext('2d');
@@ -305,10 +356,8 @@
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
-        // Hide distracting facial tracking points
         for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
 
-        // Render clean structural lines matching your logo palette
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
         drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
 
@@ -321,7 +370,7 @@
         let leftAnkle = results.poseLandmarks[27];
         let rightAnkle = results.poseLandmarks[28];
 
-        // 1. DYNAMIC VISIBILITY FILTER
+        // 1. FRAME VISIBILITY VALIDATION
         let visibilityIssue = false;
         if (currentFocus === "upper" && (leftWrist.visibility < 0.5 || rightWrist.visibility < 0.5)) visibilityIssue = true;
         if (currentFocus === "lower" && (leftAnkle.visibility < 0.5 || rightAnkle.visibility < 0.5)) visibilityIssue = true;
@@ -334,77 +383,93 @@
           return;
         }
 
-        // 2. STAGE-GRADE ARM CURVATURE ANALYSIS
+        // 2. ARM CURVATURE & HEIGHT BALANCING ANALYSIS
         let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
         let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
         let armStatus = [];
 
-        // Tightened thresholds to capture broken/drooping shapes or locked elbows
-        if (leftAngle > 162) armStatus.push("Left arm is too straight (soften the elbow).");
-        else if (leftAngle < 125) armStatus.push("Left arm is too sharply bent.");
-        
-        if (rightAngle > 162) armStatus.push("Right arm is too straight (soften the elbow).");
-        else if (rightAngle < 125) armStatus.push("Right arm is too sharply bent.");
-
-        if (armStatus.length === 0) {
-          armFeedbackText.innerText = "✨ Beautiful, seamless elongation. Soften your hands and extend naturally through your index fingers.";
-        } else {
-          armFeedbackText.innerText = armStatus.join(" ") + " Keep fingers soft and expressive, avoiding dropped thumbs.";
+        // Height mismatch check
+        if (Math.abs(leftWrist.y - rightWrist.y) > 0.07) {
+          let errorMsg = "One arm is riding higher up than the other. Level your shoulders and wrists!";
+          armStatus.push(errorMsg);
+          gatheredFeedback.add(errorMsg);
         }
 
-        // 3. ALL-POSITION POSITION ANALYZER
+        if (leftAngle > 162) {
+          armStatus.push("Left elbow is locked straight.");
+          gatheredFeedback.add("Soften your left elbow to keep a classical, fluid curve.");
+        } else if (leftAngle < 125) {
+          armStatus.push("Left elbow is too sharply bent.");
+          gatheredFeedback.add("Avoid dropping or over-bending the left elbow.");
+        }
+        
+        if (rightAngle > 162) {
+          armStatus.push("Right elbow is locked straight.");
+          gatheredFeedback.add("Soften your right elbow to keep a classical, fluid curve.");
+        } else if (rightAngle < 125) {
+          armStatus.push("Right elbow is too sharply bent.");
+          gatheredFeedback.add("Avoid dropping or over-bending the right elbow.");
+        }
+
+        if (armStatus.length === 0) {
+          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and elongate out through your fingers.";
+        } else {
+          armFeedbackText.innerText = armStatus.join(" ") + " Keep fingers soft and expressive.";
+        }
+
+        // 3. ENHANCED POSITION IDENTIFIER
         let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
         let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
         
-        let leftHigh = leftWrist.y < avgShoulderY - 0.12;
-        let rightHigh = rightWrist.y < avgShoulderY - 0.12;
-        let leftMid = leftWrist.y >= avgShoulderY - 0.12 && leftWrist.y <= avgShoulderY + 0.15;
-        let rightMid = rightWrist.y >= avgShoulderY - 0.12 && rightWrist.y <= avgShoulderY + 0.15;
-        let leftLow = leftWrist.y > avgShoulderY + 0.15;
-        let rightLow = rightWrist.y > avgShoulderY + 0.15;
+        let leftHigh = leftWrist.y < avgShoulderY - 0.15;
+        let rightHigh = rightWrist.y < avgShoulderY - 0.15;
+        let leftMid = leftWrist.y >= avgShoulderY - 0.15 && leftWrist.y <= avgShoulderY + 0.12;
+        let rightMid = rightWrist.y >= avgShoulderY - 0.15 && rightWrist.y <= avgShoulderY + 0.12;
+        let leftLow = leftWrist.y > avgShoulderY + 0.12;
+        let rightLow = rightWrist.y > avgShoulderY + 0.12;
 
-        // Symmetric Positions
+        // Symmetric Stances
         if (leftHigh && rightHigh) {
-          if (wristDistance < 0.28) {
-            detectedPositionBadge.innerText = "5th Position (En Haut)";
-            feedbackText.innerText = "Frame your face without lifting the shoulders. Drop your shoulder blades down your back.";
+          if (wristDistance < 0.22) {
+            detectedPositionBadge.innerText = "5th Position";
+            feedbackText.innerText = "Frame your face nicely. Pull your shoulders down away from your ears.";
           } else {
-            detectedPositionBadge.innerText = "Open 5th / High V";
-            feedbackText.innerText = "Keep the extension conversational. Breathe out through the palms.";
+            detectedPositionBadge.innerText = "Open 5th Position";
+            feedbackText.innerText = "Keep the breathing space up high. Ensure hands do not drop back past your peripheral vision.";
           }
         } 
         else if (leftMid && rightMid) {
           if (wristDistance > 0.48) {
             detectedPositionBadge.innerText = "2nd Position";
-            feedbackText.innerText = "Keep elbows supported from underneath. Slope the line down gently from the shoulder to the wrist.";
+            feedbackText.innerText = "Support from the upper back. Slope the line down subtly from shoulder to fingertip.";
           } else if (wristDistance < 0.25) {
-            detectedPositionBadge.innerText = "1st Position (En Avant)";
-            feedbackText.innerText = "Maintain a rounded shape in front of your sternum. Imagine holding a fragile vase.";
+            detectedPositionBadge.innerText = "1st Position";
+            feedbackText.innerText = "Create an active circle opposite your sternum. Do not let hands overlap.";
           } else {
             detectedPositionBadge.innerText = "Demi-Seconde";
-            feedbackText.innerText = "Halfway between 1st and 2nd. Keep the line relaxed and sloping down.";
+            feedbackText.innerText = "Halfway setting. Maintain long, low lines floating off the hips.";
           }
         } 
-        else if (leftLow && rightLow && wristDistance < 0.25) {
-          detectedPositionBadge.innerText = "Bras Bas (En Bas)";
-          feedbackText.innerText = "Preparatory stance. Create a clean oval shape, keeping your hands well forward of your thighs.";
+        else if (leftLow && rightLow) {
+          detectedPositionBadge.innerText = "Bras Bas";
+          feedbackText.innerText = "Preparatory resting curve. Keep your hands well forward of your thighs, keeping the oval round.";
         }
-        // Asymmetric Positions (3rd / 4th Variations)
+        // Asymmetric/Hybrid Configurations (3rd and 4th Variations)
         else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
           detectedPositionBadge.innerText = "3rd Position";
-          feedbackText.innerText = "Coordinate the lines cleanly. The high arm frames the head while the side arm supports from behind.";
+          feedbackText.innerText = "Coordinate carefully. One arm frames the upper crown while the other supports the side.";
         }
         else if ((leftHigh && rightLow) || (rightHigh && leftLow)) {
-          detectedPositionBadge.innerText = "4th Position (En Haut)";
-          feedbackText.innerText = "Ensure your forward arm remains rounded and doesn't pull behind your center line.";
+          detectedPositionBadge.innerText = "Open 4th Position";
+          feedbackText.innerText = "Keep the high arm lifted and forward while the lower arm stays dropped in a safe curve.";
         }
         else if ((leftMid && rightLow) || (rightMid && leftLow)) {
           detectedPositionBadge.innerText = "4th Position (En Avant)";
-          feedbackText.innerText = "Check your spacing. One arm remains steady in 1st while the other completes the low frame.";
+          feedbackText.innerText = "Keep your forward arm steady in front of your ribcage while the lower arm holds its frame.";
         }
         else {
           detectedPositionBadge.innerText = "Transitioning...";
-          feedbackText.innerText = "Holding a transition line. Ground your stance and extend your crown.";
+          feedbackText.innerText = "Holding transitional carriage. Steady your core alignment.";
         }
       }
       canvasCtx.restore();

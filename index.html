@@ -94,7 +94,7 @@
       background-color: #1a1a1a; 
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 14px 28px;
       font-size: 1.1em;
       border-radius: 20px;
       cursor: pointer;
@@ -219,4 +219,287 @@
     <select id="cameraFocus">
       <option value="upper" selected>Upper Body (Arms, Back, Head)</option>
       <option value="lower">Lower Body (Legs, Feet)</option>
-      <option value="
+      <option value="full">Full Body</option>
+    </select>
+
+    <label>Your Focus / Goals</label>
+    <input type="text" id="userGoals" placeholder="E.g. Extended lines, softer fingers...">
+    
+    <div class="btn-group" style="justify-content: flex-end;">
+      <button onclick="goToProfile()">Next ➔</button>
+    </div>
+  </div>
+
+  <div id="profile-page" class="page">
+    <h2>Dancer Dashboard</h2>
+    <p><strong>Name:</strong> <span id="display-name"></span></p>
+    <p><strong>Method:</strong> <span id="display-method"></span></p>
+    <p><strong>Tracking Focus:</strong> <span id="display-focus"></span></p>
+    <p><strong>Goals:</strong> <span id="display-goals"></span></p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    
+    <div class="btn-group">
+      <button class="secondary" onclick="goToSetup()">Back</button>
+      <button onclick="goToTracker()">Next ➔ Enter Studio</button>
+    </div>
+  </div>
+
+  <div id="tracker-page" class="page">
+    <div class="tracker-container">
+      <video class="input_video" autoplay playsinline style="display:none;"></video>
+      <canvas class="output_canvas" width="640" height="480"></canvas>
+    </div>
+
+    <div class="feedback-panel">
+      <h2>Live Feedback</h2>
+      <div class="status-badge" id="detectedPosition">Detecting...</div>
+      <div class="feedback-text" id="feedback">Loading your mirror...</div>
+      <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
+      
+      <div class="btn-group" style="margin-top: 30px;">
+        <button class="secondary" onclick="goToEndSession()">End Session ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summary-page" class="page">
+    <h2>Session Summary</h2>
+    <p>Here is your structured performance breakdown by position:</p>
+    
+    <div id="summaryContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+      </div>
+
+    <div class="btn-group" style="justify-content: flex-end;">
+      <button onclick="goToProfile()">Start New Session ➔</button>
+    </div>
+  </div>
+
+  <script>
+    // --- NAVIGATION & INTELLIGENT STORAGE ---
+    let currentFocus = "upper";
+    let positionHistory = {}; 
+
+    function hideAllPages() {
+      document.getElementById('setup-page').style.display = 'none';
+      document.getElementById('profile-page').style.display = 'none';
+      document.getElementById('tracker-page').style.display = 'none';
+      document.getElementById('summary-page').style.display = 'none';
+    }
+
+    function goToSetup() {
+      hideAllPages();
+      document.getElementById('setup-page').style.display = 'flex';
+    }
+
+    function goToProfile() {
+      hideAllPages();
+      currentFocus = document.getElementById('cameraFocus').value;
+      
+      document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
+      document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
+      document.getElementById('display-focus').innerText = currentFocus === "upper" ? "Upper Body" : currentFocus === "lower" ? "Lower Body" : "Full Body";
+      document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
+      
+      document.getElementById('profile-page').style.display = 'flex';
+      document.getElementById('profile-page').style.flexDirection = 'column';
+    }
+
+    let cameraStarted = false;
+    function goToTracker() {
+      hideAllPages();
+      document.getElementById('tracker-page').style.display = 'flex';
+      positionHistory = {}; // Clean session logs for a new run
+      if (!cameraStarted) {
+        camera.start();
+        cameraStarted = true;
+      }
+    }
+
+    function goToEndSession() {
+      hideAllPages();
+      const container = document.getElementById('summaryContainer');
+      container.innerHTML = "";
+
+      const trackedPositions = Object.keys(positionHistory);
+
+      if (trackedPositions.length === 0) {
+        container.innerHTML = "<div class='summary-block'><h3>No Positions Tracked</h3><ul><li>Try staying inside the camera frame longer next session!</li></ul></div>";
+      } else {
+        trackedPositions.forEach(pos => {
+          let blockHTML = `<div class='summary-block'><h3>${pos}</h3><ul>`;
+          let errors = Array.from(positionHistory[pos]); // Convert Set to Array to avoid repeats
+          
+          if (errors.length === 0) {
+            blockHTML += `<li>✨ Perfect alignment kept throughout! Great form.</li>`;
+          } else {
+            errors.forEach(err => {
+              blockHTML += `<li>${err}</li>`;
+            });
+          }
+          blockHTML += `</ul></div>`;
+          container.innerHTML += blockHTML;
+        });
+      }
+      document.getElementById('summary-page').style.display = 'flex';
+    }
+
+    // --- AI MATH & ALIGNMENT LOGIC ---
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    
+    const feedbackText = document.getElementById('feedback');
+    const armFeedbackText = document.getElementById('armFeedback');
+    const detectedPositionBadge = document.getElementById('detectedPosition');
+
+    function calculateAngle(a, b, c) {
+      let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+      let angle = Math.abs(radians * 180.0 / Math.PI);
+      if (angle > 180.0) angle = 360 - angle;
+      return angle;
+    }
+
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.poseLandmarks) {
+        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
+
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
+        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
+
+        let leftWrist = results.poseLandmarks[15];
+        let rightWrist = results.poseLandmarks[16];
+        let leftElbow = results.poseLandmarks[13];
+        let rightElbow = results.poseLandmarks[14];
+        let leftShoulder = results.poseLandmarks[11];
+        let rightShoulder = results.poseLandmarks[12];
+
+        // RAW GEOMETRIC CHECKS
+        let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+        let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+        let currentFrameErrors = [];
+
+        // Height Mismatch
+        if (Math.abs(leftWrist.y - rightWrist.y) > 0.08) {
+          currentFrameErrors.push("One arm is higher up than the other. Level your frame.");
+        }
+        
+        // Curvature Deficiencies (except in Arabesque where elbows are straighter)
+        let isLeftExtended = leftAngle > 140;
+        let isRightExtended = rightAngle > 140;
+
+        if (!isLeftExtended && leftAngle < 125) currentFrameErrors.push("Left elbow is dropped or over-bent.");
+        if (!isRightExtended && rightAngle < 125) currentFrameErrors.push("Right elbow is dropped or over-bent.");
+
+        // CORE MATH GRID
+        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
+        let avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        let currentPosName = "Transitioning...";
+
+        let leftHigh = leftWrist.y < avgShoulderY - 0.12;
+        let rightHigh = rightWrist.y < avgShoulderY - 0.12;
+        let leftMid = leftWrist.y >= avgShoulderY - 0.12 && leftWrist.y <= avgShoulderY + 0.12;
+        let rightMid = rightWrist.y >= avgShoulderY - 0.12 && rightWrist.y <= avgShoulderY + 0.12;
+        let leftLow = leftWrist.y > avgShoulderY + 0.12;
+        let rightLow = rightWrist.y > avgShoulderY + 0.12;
+
+        let leftNarrow = Math.abs(leftWrist.x - leftShoulder.x) < 0.15;
+        let rightNarrow = Math.abs(rightWrist.x - rightShoulder.x) < 0.15;
+
+        // ARABESQUE LINE DETECTION
+        let bothSameSide = (leftWrist.x < rightShoulder.x && rightWrist.x < rightShoulder.x) || (leftWrist.x > leftShoulder.x && rightWrist.x > leftShoulder.x);
+
+        if (isLeftExtended && isRightExtended) {
+          if (bothSameSide) {
+            if (Math.abs(leftWrist.y - rightWrist.y) < 0.15) {
+              currentPosName = "3rd Arabesque Line";
+              feedbackText.innerText = "Both arms extended forward. Ensure your shoulders stay pressed down.";
+            } else {
+              currentPosName = "4th Arabesque Line";
+              feedbackText.innerText = "Deep cross line. Keep energy projecting out through your back.";
+            }
+          } else if (wristDistance > 0.5 && (leftMid || leftHigh) && (rightMid || rightHigh)) {
+            if (Math.abs(leftWrist.y - rightWrist.y) > 0.1) {
+              currentPosName = "1st Arabesque Line";
+              feedbackText.innerText = "Highest arm forward, opposite arm extending side/back. Lift your chest.";
+            } else {
+              currentPosName = "2nd Arabesque Line";
+              feedbackText.innerText = "Squared shoulders, opposite arm forward. Keep the line long.";
+            }
+          }
+        }
+
+        // STANDARD POSITIONS
+        if (currentPosName === "Transitioning..." || !currentPosName.includes("Arabesque")) {
+          // If arms aren't intentionally extended, check for locked elbows
+          if (leftAngle > 162 && !currentPosName.includes("Arabesque")) currentFrameErrors.push("Left elbow is locked too straight.");
+          if (rightAngle > 162 && !currentPosName.includes("Arabesque")) currentFrameErrors.push("Right elbow is locked too straight.");
+
+          if (leftHigh && rightHigh) {
+            currentPosName = (wristDistance < 0.22) ? "5th Position" : "Open 5th Position";
+          } 
+          else if (leftMid && rightMid) {
+            if (wristDistance > 0.48) currentPosName = "2nd Position";
+            else if (wristDistance < 0.24) currentPosName = "1st Position";
+            else currentPosName = "Demi-Seconde";
+          } 
+          else if (leftLow && rightLow && wristDistance < 0.26) {
+            currentPosName = "Bras Bas";
+          }
+          else if ((leftHigh && rightMid) || (rightHigh && leftMid)) {
+            // Distinguish 3rd vs 4th based on how narrow the mid-level arm is
+            let midArmNarrow = (leftMid && leftNarrow) || (rightMid && rightNarrow);
+            currentPosName = midArmNarrow ? "4th Position" : "3rd Position";
+          }
+          else if ((leftMid && rightLow) || (rightMid && leftLow)) {
+            currentPosName = "Open 4th Position";
+          }
+
+          // Update standard position text
+          if (currentPosName === "5th Position") feedbackText.innerText = "Frame your face nicely. Drop shoulder blades down your back.";
+          else if (currentPosName === "Open 5th Position") feedbackText.innerText = "Keep the breathing space up high. Ensure hands do not drop back.";
+          else if (currentPosName === "2nd Position") feedbackText.innerText = "Support from the upper back. Slope the line down subtly.";
+          else if (currentPosName === "1st Position") feedbackText.innerText = "Maintain an active oval circle opposite your sternum.";
+          else if (currentPosName === "Bras Bas") feedbackText.innerText = "Preparatory resting curve. Keep hands clear of your thighs.";
+          else if (currentPosName === "3rd Position") feedbackText.innerText = "One arm high, one arm out to the side. Connect your center.";
+          else if (currentPosName === "4th Position") feedbackText.innerText = "One arm high, one arm curved in front. Keep the box of your hips square.";
+        }
+
+        detectedPositionBadge.innerText = currentPosName;
+
+        // SUMMARY LOGGING
+        if (currentPosName !== "Transitioning...") {
+          if (!positionHistory[currentPosName]) {
+            positionHistory[currentPosName] = new Set();
+          }
+          currentFrameErrors.forEach(err => positionHistory[currentPosName].add(err));
+        }
+
+        // LIVE UI TEXT
+        if (currentFrameErrors.length === 0) {
+          armFeedbackText.innerText = "✨ Balanced expansion. Soften your hands and extend naturally.";
+        } else {
+          armFeedbackText.innerText = currentFrameErrors.join(" ");
+        }
+      }
+      canvasCtx.restore();
+    }
+
+    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => { await pose.send({image: videoElement}); },
+      width: 640, height: 480
+    });
+  </script>
+
+</body>
+</html>

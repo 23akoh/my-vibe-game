@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Écarté.ai - Ballet Training</title>
   
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -12,7 +14,7 @@
   <style>
     /* --- LILAC AESTHETIC THEME --- */
     body {
-      background-color: #E6E6FA; /* Lilac */
+      background-color: #E6E6FA; 
       background-image: radial-gradient(circle at center, #F8F8FF 0%, #E6E6FA 100%);
       font-family: 'Helvetica Neue', sans-serif;
       color: #4a4a4a;
@@ -25,7 +27,6 @@
       min-height: 100vh;
     }
 
-    /* Subtle ballet line art detail in the background */
     body::before {
       content: "";
       position: absolute;
@@ -46,20 +47,22 @@
     .logo {
       width: 150px;
       border-radius: 10px;
-      mix-blend-mode: multiply; /* Helps the white background of the logo blend in */
+      mix-blend-mode: multiply; 
     }
 
     h1 {
-      font-family: 'Georgia', serif;
-      font-style: italic;
-      letter-spacing: 2px;
+      /* Uses Cosmopolitan if you have it, otherwise uses Great Vibes */
+      font-family: 'Cosmopolitan', 'Great Vibes', cursive; 
+      font-size: 3.5em;
+      font-weight: normal;
       color: #333;
       margin-top: 5px;
+      margin-bottom: 5px;
     }
 
     /* --- PAGE CONTAINERS --- */
     .page {
-      display: none; /* Hidden by default, managed by JS */
+      display: none; /* Everything hidden by default, JS controls this now */
       background: #ffffff;
       padding: 30px;
       border-radius: 20px;
@@ -68,20 +71,16 @@
       text-align: left;
     }
 
-    .active-page {
-      display: flex;
-      flex-direction: column;
-    }
-
     /* --- INPUTS & BUTTONS --- */
     label {
       font-weight: bold;
       color: #666;
       font-size: 0.9em;
       margin-top: 10px;
+      display: block;
     }
 
-    input[type="text"], input[type="number"], select {
+    input[type="text"], select {
       width: 90%;
       padding: 10px;
       margin: 5px 0 15px 0;
@@ -98,11 +97,11 @@
     }
 
     button {
-      background-color: #1a1a1a; /* Black to match logo */
+      background-color: #1a1a1a; 
       color: white;
       border: none;
-      padding: 10px 20px;
-      font-size: 1em;
+      padding: 12px 24px;
+      font-size: 1.1em;
       border-radius: 20px;
       cursor: pointer;
       font-weight: bold;
@@ -115,14 +114,13 @@
       border: 1px solid #ccc;
     }
 
-    button:hover { opacity: 0.8; }
+    button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
     /* --- TRACKER APP --- */
     #tracker-page {
       width: auto;
       background: transparent;
       box-shadow: none;
-      flex-direction: row;
       gap: 20px;
       align-items: flex-start;
     }
@@ -141,7 +139,7 @@
     .input_video, .output_canvas {
       width: 100%;
       height: 100%;
-      transform: scaleX(-1); /* Mirror effect */
+      transform: scaleX(-1); 
     }
 
     .output_canvas {
@@ -180,7 +178,7 @@
       margin-top: 10px;
       padding: 10px;
       background: #fafafa;
-      border-left: 3px solid #ff4d4d; /* Red detail matching logo */
+      border-left: 3px solid #ff4d4d; 
       font-size: 0.9em;
     }
   </style>
@@ -192,20 +190,165 @@
     <h1>Écarté.ai</h1>
   </div>
 
-  <div id="setup-page" class="page active-page">
-    <h2>Create Your Profile</h2>
+  <div id="setup-page" class="page">
+    <h2>Welcome to the Studio</h2>
     
     <label>Name</label>
     <input type="text" id="userName" placeholder="Your Name">
+
+    <label>Method / School</label>
+    <select id="danceMethod">
+      <option value="Vaganova">Vaganova</option>
+      <option value="Balanchine">Balanchine</option>
+      <option value="Cecchetti">Cecchetti</option>
+      <option value="French School">French School</option>
+      <option value="Royal Academy of Dance (RAD)">Royal Academy of Dance (RAD)</option>
+      <option value="Bournonville">Bournonville</option>
+    </select>
+
+    <label>Your Focus / Goals</label>
+    <input type="text" id="userGoals" placeholder="E.g. Better turnout, softer arms...">
     
-    <div style="display: flex; gap: 10px;">
-      <div style="flex: 1;">
-        <label>Age</label>
-        <input type="number" id="userAge" placeholder="Age">
+    <div class="btn-group" style="justify-content: flex-end;">
+      <button onclick="goToProfile()">Next ➔</button>
+    </div>
+  </div>
+
+  <div id="profile-page" class="page">
+    <h2>Dancer Dashboard</h2>
+    <p><strong>Name:</strong> <span id="display-name"></span></p>
+    <p><strong>Method:</strong> <span id="display-method"></span></p>
+    <p><strong>Goals:</strong> <span id="display-goals"></span></p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    
+    <div class="btn-group">
+      <button class="secondary" onclick="goToSetup()">Back</button>
+      <button onclick="goToTracker()">Enter Studio</button>
+    </div>
+  </div>
+
+  <div id="tracker-page" class="page">
+    <div class="tracker-container">
+      <video class="input_video" autoplay playsinline style="display:none;"></video>
+      <canvas class="output_canvas" width="640" height="480"></canvas>
+    </div>
+
+    <div class="feedback-panel">
+      <h2>Live Feedback</h2>
+      <div class="status-badge" id="detectedPosition">Detecting...</div>
+      <div class="feedback-text" id="feedback">Loading your mirror...</div>
+      <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
+      
+      <div class="btn-group" style="margin-top: 30px;">
+        <button class="secondary" onclick="goToProfile()">End Session</button>
       </div>
-      <div style="flex: 1;">
-        <label>Gender</label>
-        <select id="userGender">
-          <option value="Female">Female</option>
-          <option value="Male">Male</option>
-          <option value
+    </div>
+  </div>
+
+  <script>
+    // --- BULLETPROOF NAVIGATION LOGIC ---
+    function hideAllPages() {
+      document.getElementById('setup-page').style.display = 'none';
+      document.getElementById('profile-page').style.display = 'none';
+      document.getElementById('tracker-page').style.display = 'none';
+    }
+
+    function goToSetup() {
+      hideAllPages();
+      document.getElementById('setup-page').style.display = 'flex';
+      document.getElementById('setup-page').style.flexDirection = 'column';
+    }
+
+    function goToProfile() {
+      hideAllPages();
+      // Update Dashboard Text
+      document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
+      document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
+      document.getElementById('display-goals').innerText = document.getElementById('userGoals').value || "None set";
+      
+      document.getElementById('profile-page').style.display = 'flex';
+      document.getElementById('profile-page').style.flexDirection = 'column';
+    }
+
+    let cameraStarted = false;
+    function goToTracker() {
+      hideAllPages();
+      document.getElementById('tracker-page').style.display = 'flex';
+      document.getElementById('tracker-page').style.flexDirection = 'row';
+      
+      if (!cameraStarted) {
+        camera.start();
+        cameraStarted = true;
+      }
+    }
+
+    // Initialize the app by showing the first page
+    goToSetup();
+
+    // --- AI MATH & LOGIC ---
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    
+    const feedbackText = document.getElementById('feedback');
+    const armFeedbackText = document.getElementById('armFeedback');
+    const detectedPositionBadge = document.getElementById('detectedPosition');
+
+    function calculateAngle(a, b, c) {
+      let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+      let angle = Math.abs(radians * 180.0 / Math.PI);
+      if (angle > 180.0) angle = 360 - angle;
+      return angle;
+    }
+
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.poseLandmarks) {
+        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
+
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#1a1a1a', lineWidth: 3});
+        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
+
+        let leftWrist = results.poseLandmarks[15];
+        let rightWrist = results.poseLandmarks[16];
+        let leftElbow = results.poseLandmarks[13];
+        let rightElbow = results.poseLandmarks[14];
+        let leftShoulder = results.poseLandmarks[11];
+        let rightShoulder = results.poseLandmarks[12];
+
+        // 1. ARM ANGLES
+        let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+        let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+        let armStatus = [];
+
+        if (leftAngle > 165) armStatus.push("Left arm is too straight.");
+        else if (leftAngle < 130) armStatus.push("Left arm is too bent.");
+        
+        if (rightAngle > 165) armStatus.push("Right arm is too straight.");
+        else if (rightAngle < 130) armStatus.push("Right arm is too bent.");
+
+        if (armStatus.length === 0) armFeedbackText.innerText = "✨ Both arms have a beautiful curve! Remember to relax your thumbs and fingers.";
+        else armFeedbackText.innerText = armStatus.join(" ") + " Relax your fingers.";
+
+        // 2. POSITIONS
+        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
+        let leftHigh = leftWrist.y < leftShoulder.y;
+        let rightHigh = rightWrist.y < rightShoulder.y;
+
+        if (leftHigh && rightHigh && wristDistance < 0.3) {
+          detectedPositionBadge.innerText = "5th Position";
+          feedbackText.innerText = "Keep your shoulders down. Frame your face, don't hide it!";
+        } 
+        else if (!leftHigh && !rightHigh && wristDistance > 0.4) {
+          detectedPositionBadge.innerText = "2nd Position";
+          feedbackText.innerText = "Support from the back. Imagine water running down your shoulders to your fingertips.";
+        } 
+        else if (!leftHigh && !rightHigh && wristDistance < 0.25) {
+          detectedPositionBadge.innerText = "1st Position";
+          feedbackText.innerText = "Hold the beach ball in front of your navel. No tension

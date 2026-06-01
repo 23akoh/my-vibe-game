@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aesthetic Ballet AI Tracker</title>
+  <title>Élevé AI - Ballet Training</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -11,9 +11,9 @@
 
   <style>
     body {
-      background: linear-gradient(135deg, #ffe4e1, #e6e6fa);
+      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); /* Clean aesthetic silver/white */
       font-family: 'Helvetica Neue', sans-serif;
-      color: #6a5acd;
+      color: #4a4a4a;
       text-align: center;
       margin: 0;
       padding: 20px;
@@ -27,31 +27,45 @@
       font-family: 'Georgia', serif;
       font-style: italic;
       letter-spacing: 2px;
+      color: #d1bfae; /* Aesthetic ballet pink/nude */
       margin-bottom: 5px;
     }
 
-    /* --- ONBOARDING SCREEN STYLES --- */
+    /* --- ONBOARDING STYLES --- */
     #onboarding {
       background: #ffffff;
       padding: 40px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(106, 90, 205, 0.1);
-      width: 400px;
-      margin-top: 50px;
+      box-shadow: 0 10px 30px rgba(0,0,0, 0.05);
+      width: 450px;
+      margin-top: 20px;
     }
 
-    input, select {
+    input[type="text"], select {
       width: 90%;
-      padding: 10px;
+      padding: 12px;
       margin: 10px 0;
-      border: 2px solid #e6e6fa;
+      border: 1px solid #dcdcdc;
       border-radius: 10px;
-      color: #7b68ee;
       font-family: inherit;
+      background-color: #fafafa;
+    }
+
+    /* Dynamic Checkbox Grid for Grades */
+    #gradesContainer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      text-align: left;
+      gap: 10px;
+      margin: 15px 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 0.9em;
+      color: #666;
     }
 
     button {
-      background-color: #ff69b4;
+      background-color: #d1bfae;
       color: white;
       border: none;
       padding: 12px 24px;
@@ -59,18 +73,15 @@
       border-radius: 20px;
       cursor: pointer;
       font-weight: bold;
-      margin-top: 20px;
+      margin-top: 15px;
       transition: 0.3s;
     }
 
-    button:hover {
-      background-color: #ff1493;
-      transform: scale(1.05);
-    }
+    button:hover { background-color: #bda895; }
 
-    /* --- TRACKER APP STYLES --- */
+    /* --- TRACKER STYLES --- */
     #tracker-app {
-      display: none; /* Hidden until login */
+      display: none; 
       flex-direction: row;
       gap: 20px;
       margin-top: 20px;
@@ -81,21 +92,20 @@
       position: relative;
       border: 8px solid #ffffff;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(106, 90, 205, 0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0, 0.05);
       overflow: hidden;
-      background-color: #fff;
+      background-color: #000;
     }
 
     .input_video, .output_canvas {
       width: 640px;
       height: 480px;
-      transform: scaleX(-1);
+      transform: scaleX(-1); /* Mirror effect */
     }
 
     .output_canvas {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
     }
 
     .feedback-panel {
@@ -103,22 +113,14 @@
       background: #ffffff;
       border-radius: 20px;
       padding: 20px;
-      box-shadow: 0 10px 30px rgba(106, 90, 205, 0.1);
+      box-shadow: 0 10px 30px rgba(0,0,0, 0.05);
       text-align: left;
-    }
-
-    .feedback-panel h2 {
-      color: #ff69b4;
-      font-size: 1.2em;
-      margin-top: 0;
-      border-bottom: 2px solid #ffe4e1;
-      padding-bottom: 10px;
     }
 
     .status-badge {
       display: inline-block;
-      background: #e6e6fa;
-      color: #6a5acd;
+      background: #f4ece6;
+      color: #a38d7a;
       padding: 5px 10px;
       border-radius: 15px;
       font-size: 0.9em;
@@ -127,50 +129,51 @@
     }
 
     .feedback-text {
-      font-size: 1.1em;
-      font-weight: bold;
-      color: #7b68ee;
-      min-height: 60px;
+      font-size: 1em;
+      line-height: 1.4;
+      color: #555;
+      min-height: 80px;
+    }
+    
+    .arm-feedback {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fafafa;
+      border-left: 3px solid #d1bfae;
+      font-size: 0.9em;
     }
 
-    .error-text {
-      color: #ff4500; /* Red-orange for errors like "step back" */
-    }
-
-    .reference-image {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 15px;
-      display: none;
-    }
+    .error-text { color: #d9534f; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <h1>Virtual Ballet Coach</h1>
+  <h1>Élevé AI</h1>
 
   <div id="onboarding">
-    <h2>Create Your Profile</h2>
-    <input type="text" id="userName" placeholder="Your Name" required>
+    <h2>Dancer Profile</h2>
     
-    <select id="danceStyle">
-      <option value="" disabled selected>Select Your Method</option>
-      <option value="vaganova">Vaganova (Russian)</option>
-      <option value="cecchetti">Cecchetti (Italian)</option>
-      <option value="rad">RAD (British)</option>
-      <option value="balanchine">Balanchine (American)</option>
-    </select>
+    <input list="boards" id="boardInput" placeholder="Type your Exam Board (e.g. RAD)" onchange="updateGrades()">
+    <datalist id="boards">
+      <option value="RAD (Royal Academy of Dance)">
+      <option value="ISTD (Imperial Society)">
+      <option value="IDTA (International Dance Teachers)">
+      <option value="BBO (bbodance)">
+      <option value="ABD (Associated Board of Dance)">
+      <option value="Vaganova Method">
+    </datalist>
 
-    <select id="danceLevel">
-      <option value="" disabled selected>Select Grade / Level</option>
-      <option value="beginner">Beginner</option>
-      <option value="intermediate">Intermediate / Pre-Pointe</option>
-      <option value="advanced">Advanced / Pre-Pro</option>
-    </select>
+    <div id="gradesContainer">
+      </div>
 
-    <input type="text" id="userGoals" placeholder="E.g., Improve pirouettes, better turnout...">
+    <select id="cameraFocus">
+      <option value="" disabled selected>Select Camera Focus Area</option>
+      <option value="upper">Upper Body (Arms, Back, Head)</option>
+      <option value="lower">Lower Body (Legs, Feet)</option>
+      <option value="full">Full Body</option>
+    </select>
     
-    <button onclick="startApp()">Start Training ✨</button>
+    <button onclick="startApp()">Enter Studio</button>
   </div>
 
   <div id="tracker-app">
@@ -180,25 +183,46 @@
     </div>
 
     <div class="feedback-panel">
-      <h2>Welcome, <span id="displayName">Dancer</span>!</h2>
-      <div class="status-badge" id="detectedPosition">Detecting Position...</div>
-      <div class="feedback-text" id="feedback">Stand back so your full body is in the camera view.</div>
-      
-      <img id="ref-image" class="reference-image" src="" alt="Ballet Reference">
+      <h2>Live Feedback</h2>
+      <div class="status-badge" id="detectedPosition">Detecting...</div>
+      <div class="feedback-text" id="feedback">Loading your mirror...</div>
+      <div class="arm-feedback" id="armFeedback">Tracking arms...</div>
     </div>
   </div>
 
   <script>
-    // --- UI LOGIC ---
+    // --- ONBOARDING LOGIC ---
+    const syllabusData = {
+      "RAD (Royal Academy of Dance)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Intermediate Foundation", "Intermediate", "Advanced Foundation", "Advanced 1", "Advanced 2"],
+      "ISTD (Imperial Society)": ["Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Intermediate Foundation", "Intermediate", "Advanced 1", "Advanced 2"],
+      "IDTA (International Dance Teachers)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate", "Advanced 1", "Advanced 2"],
+      "BBO (bbodance)": ["Pre-Syllabus", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Intermediate Foundation", "Intermediate"],
+      "ABD (Associated Board of Dance)": ["Preparatory", "Primary", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Majors"],
+      "Vaganova Method": ["Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6", "Level 7", "Level 8"]
+    };
+
+    function updateGrades() {
+      const board = document.getElementById('boardInput').value;
+      const container = document.getElementById('gradesContainer');
+      container.innerHTML = ""; // Clear old options
+
+      if (syllabusData[board]) {
+        syllabusData[board].forEach(grade => {
+          container.innerHTML += `<label><input type="checkbox" value="${grade}"> ${grade}</label>`;
+        });
+      } else {
+        container.innerHTML = "<i>Select an exam board to see grades.</i>";
+      }
+    }
+
+    let currentFocus = "full";
+
     function startApp() {
-      const name = document.getElementById('userName').value || "Dancer";
-      document.getElementById('displayName').innerText = name;
-      
-      // Hide onboarding, show tracker
+      currentFocus = document.getElementById('cameraFocus').value;
+      if(!currentFocus) return alert("Please select a Camera Focus Area!");
+
       document.getElementById('onboarding').style.display = 'none';
       document.getElementById('tracker-app').style.display = 'flex';
-      
-      // Start the camera
       camera.start();
     }
 
@@ -208,77 +232,101 @@
     const canvasCtx = canvasElement.getContext('2d');
     
     const feedbackText = document.getElementById('feedback');
+    const armFeedbackText = document.getElementById('armFeedback');
     const detectedPositionBadge = document.getElementById('detectedPosition');
-    const refImage = document.getElementById('ref-image');
 
-    // Reference Images (You can swap these URLs with your own aesthetic photos later!)
-    const images = {
-      first: "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=400&q=80",
-      second: "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=400&q=80",
-      fifth: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=400&q=80"
-    };
+    function calculateAngle(a, b, c) {
+      let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+      let angle = Math.abs(radians * 180.0 / Math.PI);
+      if (angle > 180.0) angle = 360 - angle;
+      return angle;
+    }
 
     function onResults(results) {
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      // Draw the live video feed (your mirror)
       canvasCtx.translate(canvasElement.width, 0);
       canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
-        // Hide face dots (0-10)
+        // Hide face dots
         for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
 
-        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffb6c1', lineWidth: 4});
-        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#9370db', lineWidth: 2, radius: 4});
+        // Draw aesthetic skeleton
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#d1bfae', lineWidth: 3});
+        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffffff', lineWidth: 2, radius: 4});
 
         let leftWrist = results.poseLandmarks[15];
         let rightWrist = results.poseLandmarks[16];
+        let leftElbow = results.poseLandmarks[13];
+        let rightElbow = results.poseLandmarks[14];
         let leftShoulder = results.poseLandmarks[11];
         let rightShoulder = results.poseLandmarks[12];
         let leftAnkle = results.poseLandmarks[27];
+        let rightAnkle = results.poseLandmarks[28];
 
-        // 1. VISIBILITY CHECK: Is the full body in frame?
-        if (leftAnkle.visibility < 0.5 || leftWrist.visibility < 0.5) {
-          feedbackText.innerHTML = "<span class='error-text'>⚠️ Step back! Make sure your wrists and ankles are in the frame.</span>";
-          detectedPositionBadge.innerText = "Camera Blocked";
-          refImage.style.display = "none";
-          return; // Stop running the rest of the checks until they step back
+        // 1. VISIBILITY CHECK (Based on user choice)
+        let isBlocked = false;
+        if (currentFocus === "upper" && (leftWrist.visibility < 0.5 || rightWrist.visibility < 0.5)) isBlocked = true;
+        if (currentFocus === "lower" && (leftAnkle.visibility < 0.5 || rightAnkle.visibility < 0.5)) isBlocked = true;
+        if (currentFocus === "full" && (leftWrist.visibility < 0.5 || leftAnkle.visibility < 0.5)) isBlocked = true;
+
+        if (isBlocked) {
+          feedbackText.innerHTML = `<span class='error-text'>⚠️ Camera blocked or too close! Step back so your ${currentFocus} body is in frame.</span>`;
+          armFeedbackText.innerText = "";
+          return;
         }
 
-        // 2. POSITION DETECTOR LOGIC
-        // Math to find distance between wrists
-        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
-        
-        // Are wrists above shoulders? (In HTML canvas, lower Y value means HIGHER up on screen)
-        let wristsHigh = (leftWrist.y < leftShoulder.y) && (rightWrist.y < rightShoulder.y);
-        let wristsLow = (leftWrist.y > leftShoulder.y) && (rightWrist.y > rightShoulder.y);
+        // 2. INDIVIDUAL ARM ANGLES (Too straight vs Too curved)
+        if (currentFocus === "upper" || currentFocus === "full") {
+          let leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+          let rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+          let armStatus = [];
 
-        if (wristsHigh && wristDistance < 0.3) {
-          // Wrists are above head and close together
-          detectedPositionBadge.innerText = "5th Position Detected";
-          feedbackText.innerText = "Keep your shoulders pressed down. Don't let them rise to your ears!";
-          refImage.src = images.fifth;
-          refImage.style.display = "block";
+          // Left Arm checks
+          if (leftAngle > 165) armStatus.push("Left arm is too straight.");
+          else if (leftAngle < 110) armStatus.push("Left arm is too bent/curved.");
+          
+          // Right Arm checks
+          if (rightAngle > 165) armStatus.push("Right arm is too straight.");
+          else if (rightAngle < 110) armStatus.push("Right arm is too bent/curved.");
+
+          if (armStatus.length === 0) armFeedbackText.innerText = "✨ Both arms have a beautiful curve!";
+          else armFeedbackText.innerText = armStatus.join(" ");
+        }
+
+        // 3. POSITIONS (1st, 2nd, 3rd, 4th, 5th)
+        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
+        let leftHigh = leftWrist.y < leftShoulder.y;
+        let rightHigh = rightWrist.y < rightShoulder.y;
+
+        if (leftHigh && rightHigh && wristDistance < 0.3) {
+          detectedPositionBadge.innerText = "5th Position";
+          feedbackText.innerText = "Keep your shoulders down. Frame your face, don't hide it!";
         } 
-        else if (wristsLow && wristDistance > 0.4) {
-          // Wrists are low and far apart
-          detectedPositionBadge.innerText = "2nd Position Detected";
-          feedbackText.innerText = "Lengthen through your elbows. Support your arms from your back!";
-          refImage.src = images.second;
-          refImage.style.display = "block";
+        else if (!leftHigh && !rightHigh && wristDistance > 0.4) {
+          detectedPositionBadge.innerText = "2nd Position";
+          feedbackText.innerText = "Support from the back. Imagine water running down your shoulders to your fingertips.";
         } 
-        else if (wristsLow && wristDistance < 0.2) {
-          // Wrists are low and close together
-          detectedPositionBadge.innerText = "1st Position Detected";
-          feedbackText.innerText = "Imagine holding a beach ball. Relax your fingers—no tension in the hands!";
-          refImage.src = images.first;
-          refImage.style.display = "block";
-        } 
-        else {
-          detectedPositionBadge.innerText = "Transitioning...";
-          feedbackText.innerText = "Move into 1st, 2nd, or 5th position for feedback.";
-          refImage.style.display = "none";
+        else if (!leftHigh && !rightHigh && wristDistance < 0.2) {
+          detectedPositionBadge.innerText = "1st Position";
+          feedbackText.innerText = "Hold the beach ball. Relax your thumbs and fingers.";
+        }
+        else if ((leftHigh && !rightHigh) || (!leftHigh && rightHigh)) {
+          // One high, one low = 4th position
+          detectedPositionBadge.innerText = "4th Position";
+          feedbackText.innerText = "Ensure your high arm is slightly in front of you, not directly over your head.";
+        }
+        else if (!leftHigh && !rightHigh && wristDistance >= 0.2 && wristDistance <= 0.4) {
+          // One center, one out = 3rd position
+          detectedPositionBadge.innerText = "3rd Position";
+          feedbackText.innerText = "Keep your center arm curved exactly like 1st position.";
+        } else {
+          detectedPositionBadge.innerText = "Tracking...";
+          feedbackText.innerText = "Move into a position.";
         }
       }
       canvasCtx.restore();

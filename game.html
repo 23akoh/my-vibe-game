@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Runner Balancer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b0e14;
+            color: #f0f6fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            border: 3px solid #1f242c;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        #gameCanvas {
+            background: linear-gradient(135deg, #121824 0%, #0b0e14 100%);
+            display: block;
+            border-radius: 13px;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .score-board {
+            background: rgba(18, 24, 36, 0.85);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #2d3542;
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 14, 20, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            backdrop-filter: blur(5px);
+        }
+
+        #game-over-screen h1 {
+            color: #ff4a4a;
+            font-size: 48px;
+            margin: 0 0 10px 0;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px rgba(255, 74, 74, 0.4);
+        }
+
+        #game-over-screen p {
+            font-size: 18px;
+            color: #8b949e;
+            margin: 0 0 25px 0;
+        }
+
+        #restartBtn {
+            background: #00ff87;
+            color: #0b0e14;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        #restartBtn:hover {
+            background: #00df75;
+            transform: scale(1.03);
+        }
+
+        #controls-guide {
+            margin-top: 25px;
+            text-align: center;
+            color: #6e7681;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .key {
+            background: #1f242c;
+            border: 1px solid #3d444d;
+            border-radius: 6px;
+            padding: 3px 8px;
+            color: #00ff87;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div id="ui-overlay">
+            <div class="score-board">Score: <span id="scoreVal">0</span></div>
+            <div class="score-board">High Score: <span id="highScoreVal">0</span></div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>GAME OVER</h1>
+            <p>The ball fell off or you hit an obstacle!</p>
+            <button id="restartBtn">Run Again (SPACE)</button>
+        </div>
+    </div>
+
+    <div id="controls-guide">
+        <p><span class="key">SPACEBAR</span> to Jump over obstacles</p>
+        <p><span class="key">LEFT / RIGHT ARROWS</span> or <span class="key">A / D</span> to Tilt & Balance the Ball</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreVal = document.getElementById("scoreVal");
+        const highScoreVal = document.getElementById("highScoreVal");
+        const gameOverScreen = document.getElementById("game-over-screen");
+        const restartBtn = document.getElementById("restartBtn");
+
+        let score = 0;
+        let highScore = localStorage.getItem("balancer_high_score") || 0;
+        highScoreVal.innerText = highScore;
+        let gameOver = false;
+        let gameSpeed = 5;
+        let animationId;
+
+        const GRAVITY = 0.55;
+        const GROUND_Y = 330;
+
+        const player = {
+            x: 160,
+            y: GROUND_Y - 50,
+            width: 32,
+            height: 50,
+            vy: 0,
+            isGrounded: false,
+            platformWidth: 150,
+            platformHeight: 10,
+            platformTilt: 0, 
+            maxTilt: 0.6,      
+            tiltSpeed: 0.04
+        };
+
+        const ball = {
+            localX: 0,         
+            radius: 10,
+            vx: 0,
+            parentYOffset: -28 
+        };
+
+        let obstacles = [];
+        let obstacleTimer = 0;
+        const keys = {};
+
+        window.addEventListener("keydown", (e) => {
+            keys[e.code] = true;
+            if (e.code === "Space" && player.isGrounded && !gameOver) {
+                player.vy = -12;
+                player.isGrounded = false;
+            }
+            if (e.code === "Space" && gameOver) {
+                resetGame();
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            keys[e.code] = false;
+        });
+
+        restartBtn.addEventListener("click", resetGame);
+
+        function resetGame() {
+            cancelAnimationFrame(animationId);
+            score = 0;
+            gameSpeed = 5;
+            gameOver = false;
+            obstacles = [];
+            obstacleTimer = 0;
+            
+            player.y = GROUND_Y - 50;
+            player.vy = 0;
+            player.platformTilt = 0;
+            
+            ball.localX = 0;
+            ball.vx = 0;
+            
+            scoreVal.innerText = score;
+            gameOverScreen.classList.add("hidden");
+            animate();
+        }
+
+        function spawnObstacle() {
+            const height = Math.random() * 25 + 25;
+            obstacles.push({
+                x: canvas.width,
+                y: GROUND_Y - height,
+                width: 24,
+                height: height
+            });
+        }
+
+        function handleGameOver() {
+            gameOver = true;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("balancer_high_score", highScore);
+                highScoreVal.innerText = highScore;
+            }
+            gameOverScreen.classList.remove("hidden");
+        }
+
+        function animate() {
+            if (gameOver) return;
+
+            animationId = requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            score++;
+            scoreVal.innerText = score;
+            if (score % 600 === 0) gameSpeed += 0.6; 
+
+            ctx.fillStyle = "#161d2a";
+            ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y); 
+            ctx.strokeStyle = "#2d3542";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(canvas.width, GROUND_Y);
+            ctx.stroke();
+
+            player.vy += GRAVITY;
+            player.y += player.vy;
+
+            if (player.y >= GROUND_Y - player.height) {
+                player.y = GROUND_Y - player.height;
+                player.vy = 0;
+                player.isGrounded = true;
+            }
+
+            if (keys["ArrowLeft"] || keys["KeyA"]) player.platformTilt -= player.tiltSpeed;
+            if (keys["ArrowRight"] || keys["KeyD"]) player.platformTilt += player.tiltSpeed;
+            
+            if (!keys["ArrowLeft"] && !keys["KeyA"] && !keys["ArrowRight"] && !keys["KeyD"]) {
+                player.platformTilt *= 0.88; 
+            }
+            player.platformTilt = Math.max(-player.maxTilt, Math.min(player.maxTilt, player.platformTilt));
+
+            ctx.fillStyle = "#00ff87"; 
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.save();
+            let platformCenterX = player.x + player.width / 2;
+            let platformCenterY = player.y; 
+            ctx.translate(platformCenterX, platformCenterY);
+            ctx.rotate(player.platformTilt);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(-player.platformWidth / 2, -player.platformHeight, player.platformWidth, player.platformHeight);
+            ctx.restore();
+
+            let ballAcceleration = 0.28 * Math.sin(player.platformTilt);
+            ball.vx += ballAcceleration;
+            ball.vx *= 0.97; 
+            ball.localX += ball.vx;
+
+            let globalBallX = platformCenterX + ball.localX * Math.cos(player.platformTilt) - ball.parentYOffset * Math.sin(player.platformTilt);
+            let globalBallY = platformCenterY + ball.localX * Math.sin(player.platformTilt) + ball.parentYOffset * Math.cos(player.platformTilt);
+
+            if (Math.abs(ball.localX) > player.platformWidth / 2 + ball.radius) {
+                handleGameOver();
+            }
+
+            ctx.beginPath();
+            ctx.arc(globalBallX, globalBallY - ball.radius, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#3a86ff";
+            ctx.fill();
+            ctx.closePath();
+
+            obstacleTimer++;
+            if (obstacleTimer > Math.max(50, 140 - gameSpeed * 4)) {
+                spawnObstacle();
+                obstacleTimer = 0;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                ctx.fillStyle = "#ff0055";
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                if (obs.x < player.x + player.width &&
+                    obs.x + obs.width > player.x &&
+                    obs.y < player.y + player.height &&
+                    obs.y + obs.height > player.y) {
+                        handleGameOver();
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        resetGame();
+    </script>
+</body>
+</html>

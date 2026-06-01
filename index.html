@@ -20,6 +20,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      min-height: 100vh;
     }
 
     h1 {
@@ -29,9 +30,48 @@
       margin-bottom: 5px;
     }
 
-    /* Container to hold camera and feedback side-by-side */
-    .main-container {
-      display: flex;
+    /* --- ONBOARDING SCREEN STYLES --- */
+    #onboarding {
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(106, 90, 205, 0.1);
+      width: 400px;
+      margin-top: 50px;
+    }
+
+    input, select {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 2px solid #e6e6fa;
+      border-radius: 10px;
+      color: #7b68ee;
+      font-family: inherit;
+    }
+
+    button {
+      background-color: #ff69b4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1.1em;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #ff1493;
+      transform: scale(1.05);
+    }
+
+    /* --- TRACKER APP STYLES --- */
+    #tracker-app {
+      display: none; /* Hidden until login */
+      flex-direction: row;
       gap: 20px;
       margin-top: 20px;
       align-items: flex-start;
@@ -58,9 +98,8 @@
       left: 0;
     }
 
-    /* The Aesthetic Feedback Panel */
     .feedback-panel {
-      width: 300px;
+      width: 320px;
       background: #ffffff;
       border-radius: 20px;
       padding: 20px;
@@ -76,125 +115,183 @@
       padding-bottom: 10px;
     }
 
+    .status-badge {
+      display: inline-block;
+      background: #e6e6fa;
+      color: #6a5acd;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 0.9em;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
     .feedback-text {
       font-size: 1.1em;
       font-weight: bold;
       color: #7b68ee;
-      min-height: 50px;
+      min-height: 60px;
     }
 
-    /* Image to show correct posture */
+    .error-text {
+      color: #ff4500; /* Red-orange for errors like "step back" */
+    }
+
     .reference-image {
       width: 100%;
       border-radius: 10px;
       margin-top: 15px;
-      display: none; /* Hidden by default */
+      display: none;
     }
   </style>
 </head>
 <body>
 
   <h1>Virtual Ballet Coach</h1>
-  <div id="loading">Loading camera and AI model...</div>
 
-  <div class="main-container">
+  <div id="onboarding">
+    <h2>Create Your Profile</h2>
+    <input type="text" id="userName" placeholder="Your Name" required>
+    
+    <select id="danceStyle">
+      <option value="" disabled selected>Select Your Method</option>
+      <option value="vaganova">Vaganova (Russian)</option>
+      <option value="cecchetti">Cecchetti (Italian)</option>
+      <option value="rad">RAD (British)</option>
+      <option value="balanchine">Balanchine (American)</option>
+    </select>
+
+    <select id="danceLevel">
+      <option value="" disabled selected>Select Grade / Level</option>
+      <option value="beginner">Beginner</option>
+      <option value="intermediate">Intermediate / Pre-Pointe</option>
+      <option value="advanced">Advanced / Pre-Pro</option>
+    </select>
+
+    <input type="text" id="userGoals" placeholder="E.g., Improve pirouettes, better turnout...">
+    
+    <button onclick="startApp()">Start Training ✨</button>
+  </div>
+
+  <div id="tracker-app">
     <div class="tracker-container">
       <video class="input_video" autoplay playsinline style="display:none;"></video>
       <canvas class="output_canvas" width="640" height="480"></canvas>
     </div>
 
     <div class="feedback-panel">
-      <h2>AI Corrections</h2>
-      <div class="feedback-text" id="feedback">Stand in front of the camera to begin analyzing your port de bras!</div>
-      <img id="ref-image" class="reference-image" src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Correct Arm Curve">
+      <h2>Welcome, <span id="displayName">Dancer</span>!</h2>
+      <div class="status-badge" id="detectedPosition">Detecting Position...</div>
+      <div class="feedback-text" id="feedback">Stand back so your full body is in the camera view.</div>
+      
+      <img id="ref-image" class="reference-image" src="" alt="Ballet Reference">
     </div>
   </div>
 
   <script>
+    // --- UI LOGIC ---
+    function startApp() {
+      const name = document.getElementById('userName').value || "Dancer";
+      document.getElementById('displayName').innerText = name;
+      
+      // Hide onboarding, show tracker
+      document.getElementById('onboarding').style.display = 'none';
+      document.getElementById('tracker-app').style.display = 'flex';
+      
+      // Start the camera
+      camera.start();
+    }
+
+    // --- AI LOGIC ---
     const videoElement = document.getElementsByClassName('input_video')[0];
     const canvasElement = document.getElementsByClassName('output_canvas')[0];
     const canvasCtx = canvasElement.getContext('2d');
+    
     const feedbackText = document.getElementById('feedback');
+    const detectedPositionBadge = document.getElementById('detectedPosition');
     const refImage = document.getElementById('ref-image');
 
-    // Math formula to calculate the angle between three points (e.g., shoulder, elbow, wrist)
-    function calculateAngle(a, b, c) {
-      let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-      let angle = Math.abs(radians * 180.0 / Math.PI);
-      if (angle > 180.0) {
-        angle = 360 - angle;
-      }
-      return angle;
-    }
+    // Reference Images (You can swap these URLs with your own aesthetic photos later!)
+    const images = {
+      first: "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=400&q=80",
+      second: "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=400&q=80",
+      fifth: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=400&q=80"
+    };
 
     function onResults(results) {
-      document.getElementById('loading').style.display = 'none';
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-      // Draw the video frame on the canvas
       canvasCtx.translate(canvasElement.width, 0);
       canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
       if (results.poseLandmarks) {
-        // STEP 1: Hide the face dots! (Indices 0 through 10)
-        for (let i = 0; i <= 10; i++) {
-          results.poseLandmarks[i].visibility = 0; 
-        }
+        // Hide face dots (0-10)
+        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0;
 
-        // Draw the aesthetic pink and purple skeleton
         drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffb6c1', lineWidth: 4});
         drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#9370db', lineWidth: 2, radius: 4});
 
-        // STEP 2: The Ballet Logic Engine
-        // Get the positions for Left Arm (Shoulder: 11, Elbow: 13, Wrist: 15)
-        let leftShoulder = results.poseLandmarks[11];
-        let leftElbow = results.poseLandmarks[13];
         let leftWrist = results.poseLandmarks[15];
+        let rightWrist = results.poseLandmarks[16];
+        let leftShoulder = results.poseLandmarks[11];
+        let rightShoulder = results.poseLandmarks[12];
+        let leftAnkle = results.poseLandmarks[27];
 
-        // Ensure the AI can actually see your arm clearly before judging
-        if (leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5 && leftWrist.visibility > 0.5) {
-          
-          let elbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+        // 1. VISIBILITY CHECK: Is the full body in frame?
+        if (leftAnkle.visibility < 0.5 || leftWrist.visibility < 0.5) {
+          feedbackText.innerHTML = "<span class='error-text'>⚠️ Step back! Make sure your wrists and ankles are in the frame.</span>";
+          detectedPositionBadge.innerText = "Camera Blocked";
+          refImage.style.display = "none";
+          return; // Stop running the rest of the checks until they step back
+        }
 
-          // If the angle is too close to 180 degrees, the arm is stiff and locked
-          if (elbowAngle > 165) {
-            feedbackText.innerText = "Your arms are too straight! Soften the elbows and create a curve.";
-            refImage.style.display = "block"; // Show the visual reference
-          } 
-          // If the angle is good, clear the warning
-          else if (elbowAngle > 130 && elbowAngle <= 165) {
-            feedbackText.innerText = "Beautiful arm curve. Hold that shape!";
-            refImage.style.display = "none"; // Hide the image
-          }
+        // 2. POSITION DETECTOR LOGIC
+        // Math to find distance between wrists
+        let wristDistance = Math.abs(leftWrist.x - rightWrist.x);
+        
+        // Are wrists above shoulders? (In HTML canvas, lower Y value means HIGHER up on screen)
+        let wristsHigh = (leftWrist.y < leftShoulder.y) && (rightWrist.y < rightShoulder.y);
+        let wristsLow = (leftWrist.y > leftShoulder.y) && (rightWrist.y > rightShoulder.y);
+
+        if (wristsHigh && wristDistance < 0.3) {
+          // Wrists are above head and close together
+          detectedPositionBadge.innerText = "5th Position Detected";
+          feedbackText.innerText = "Keep your shoulders pressed down. Don't let them rise to your ears!";
+          refImage.src = images.fifth;
+          refImage.style.display = "block";
+        } 
+        else if (wristsLow && wristDistance > 0.4) {
+          // Wrists are low and far apart
+          detectedPositionBadge.innerText = "2nd Position Detected";
+          feedbackText.innerText = "Lengthen through your elbows. Support your arms from your back!";
+          refImage.src = images.second;
+          refImage.style.display = "block";
+        } 
+        else if (wristsLow && wristDistance < 0.2) {
+          // Wrists are low and close together
+          detectedPositionBadge.innerText = "1st Position Detected";
+          feedbackText.innerText = "Imagine holding a beach ball. Relax your fingers—no tension in the hands!";
+          refImage.src = images.first;
+          refImage.style.display = "block";
+        } 
+        else {
+          detectedPositionBadge.innerText = "Transitioning...";
+          feedbackText.innerText = "Move into 1st, 2nd, or 5th position for feedback.";
+          refImage.style.display = "none";
         }
       }
       canvasCtx.restore();
     }
 
-    const pose = new Pose({locateFile: (file) => {
-      return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-    }});
-    
-    pose.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
-    
+    const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     pose.onResults(onResults);
 
     const camera = new Camera(videoElement, {
-      onFrame: async () => {
-        await pose.send({image: videoElement});
-      },
-      width: 640,
-      height: 480
+      onFrame: async () => { await pose.send({image: videoElement}); },
+      width: 640, height: 480
     });
-    
-    camera.start();
   </script>
 
 </body>

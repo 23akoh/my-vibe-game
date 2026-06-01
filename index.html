@@ -3,56 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinite Runner Balancer</title>
+    <title>3D Void Runner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
-            padding: 0;
-            background-color: #0b0e14;
-            color: #f0f6fc;
+            overflow: hidden; /* Stops scrolling */
+            background-color: #050510;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
+            color: white;
         }
 
-        #game-container {
-            position: relative;
-            width: 800px;
-            height: 400px;
-            border: 3px solid #1f242c;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-        }
-
-        #gameCanvas {
-            background: linear-gradient(135deg, #121824 0%, #0b0e14 100%);
-            display: block;
-            border-radius: 13px;
-        }
-
-        #ui-overlay {
+        #ui-layer {
             position: absolute;
             top: 20px;
             left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ffff;
+            z-index: 10;
         }
 
-        .score-board {
-            background: rgba(18, 24, 36, 0.85);
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 1px solid #2d3542;
-            font-weight: bold;
-            font-size: 18px;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .key {
+            background: #222;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #00ffff;
+            border: 1px solid #00ffff;
         }
 
         #game-over-screen {
@@ -61,284 +48,289 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(11, 14, 20, 0.9);
-            display: flex;
+            background: rgba(5, 5, 16, 0.85);
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border-radius: 13px;
+            z-index: 20;
             backdrop-filter: blur(5px);
         }
 
         #game-over-screen h1 {
-            color: #ff4a4a;
-            font-size: 48px;
-            margin: 0 0 10px 0;
+            color: #ff0055;
+            font-size: 50px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ff0055;
             letter-spacing: 3px;
-            text-shadow: 0 0 15px rgba(255, 74, 74, 0.4);
         }
 
-        #game-over-screen p {
+        button {
+            background: transparent;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
             font-size: 18px;
-            color: #8b949e;
-            margin: 0 0 25px 0;
-        }
-
-        #restartBtn {
-            background: #00ff87;
-            color: #0b0e14;
-            border: none;
-            padding: 14px 28px;
-            font-size: 16px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.4);
-            transition: transform 0.1s, background 0.2s;
+            margin-top: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            transition: all 0.2s;
         }
 
-        #restartBtn:hover {
-            background: #00df75;
-            transform: scale(1.03);
-        }
-
-        #controls-guide {
-            margin-top: 25px;
-            text-align: center;
-            color: #6e7681;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .key {
-            background: #1f242c;
-            border: 1px solid #3d444d;
-            border-radius: 6px;
-            padding: 3px 8px;
-            color: #00ff87;
-            font-family: monospace;
-            font-weight: bold;
-        }
-
-        .hidden {
-            display: none !important;
+        button:hover {
+            background: #00ffff;
+            color: #000;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        
-        <div id="ui-overlay">
-            <div class="score-board">Score: <span id="scoreVal">0</span></div>
-            <div class="score-board">High Score: <span id="highScoreVal">0</span></div>
-        </div>
-
-        <div id="game-over-screen" class="hidden">
-            <h1>GAME OVER</h1>
-            <p>The ball fell off or you hit an obstacle!</p>
-            <button id="restartBtn">Run Again (SPACE)</button>
-        </div>
+    <div id="ui-layer">Score: <span id="scoreVal">0</span></div>
+    
+    <div id="controls">
+        <span class="key">LEFT / RIGHT</span> to move | <span class="key">SPACEBAR</span> to jump
     </div>
 
-    <div id="controls-guide">
-        <p><span class="key">SPACEBAR</span> to Jump over obstacles</p>
-        <p><span class="key">LEFT / RIGHT ARROWS</span> or <span class="key">A / D</span> to Tilt & Balance the Ball</p>
+    <div id="game-over-screen">
+        <h1>YOU FELL</h1>
+        <p style="color: #aaa; font-size: 18px;">Watch your step in the void.</p>
+        <button onclick="resetGame()">Run Again</button>
     </div>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreVal = document.getElementById("scoreVal");
-        const highScoreVal = document.getElementById("highScoreVal");
-        const gameOverScreen = document.getElementById("game-over-screen");
-        const restartBtn = document.getElementById("restartBtn");
+        // 1. Scene, Camera, and Renderer Setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050510, 0.015); // Adds deep space fade-out
 
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Position camera behind and slightly above the player
+        camera.position.set(0, 4, 8);
+        camera.lookAt(0, 0, -10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x00ffff, 1.5, 50);
+        pointLight.position.set(0, 5, 0);
+        scene.add(pointLight);
+
+        // 3. Player Character (A glowing cube)
+        const playerGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const playerMat = new THREE.MeshStandardMaterial({ 
+            color: 0x00ffff, 
+            emissive: 0x008888,
+            roughness: 0.2
+        });
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        scene.add(player);
+
+        // 4. Track Generation Variables
+        const platforms = [];
+        const laneWidth = 1.5;
+        const tileLength = 2.5;
+        const numLanes = 5; // Lanes: -2, -1, 0, 1, 2
+        
+        let speed = 0.35;
         let score = 0;
-        let highScore = localStorage.getItem("balancer_high_score") || 0;
-        highScoreVal.innerText = highScore;
+        let distanceTraveled = 0;
+
+        // Materials for the platforms
+        const tileGeo = new THREE.BoxGeometry(laneWidth - 0.1, 0.2, tileLength);
+        const tileMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.5 });
+
+        function createTile(lane, z) {
+            const tile = new THREE.Mesh(tileGeo, tileMat);
+            tile.position.set(lane * laneWidth, 0, z);
+
+            // Add glowing Tron-style borders to the tiles
+            const edges = new THREE.EdgesGeometry(tileGeo);
+            const line = new THREE.LineSegments(edges, edgeMat);
+            tile.add(line);
+
+            scene.add(tile);
+            platforms.push(tile);
+        }
+
+        function generateInitialTrack() {
+            // Build the track from behind the camera all the way into the fog
+            for (let z = 10; z > -120; z -= tileLength) {
+                if (z > -20) {
+                    // Safe zone at the start (no gaps)
+                    for(let i = -2; i <= 2; i++) createTile(i, z);
+                } else {
+                    // Randomly leave gaps
+                    let gapCount = 0;
+                    for(let i = -2; i <= 2; i++) {
+                        if (Math.random() > 0.3) { // 70% chance to spawn a tile
+                            createTile(i, z);
+                        } else {
+                            gapCount++;
+                        }
+                    }
+                    // Prevent impossible jumps where all 5 lanes are missing
+                    if (gapCount === 5) createTile(Math.floor(Math.random() * 5) - 2, z);
+                }
+            }
+        }
+
+        // 5. Physics and Controls
+        let playerVy = 0;
+        const gravity = -0.025;
+        const jumpForce = 0.45;
+        let isGrounded = false;
         let gameOver = false;
-        let gameSpeed = 5;
         let animationId;
 
-        const GRAVITY = 0.55;
-        const GROUND_Y = 330;
-
-        const player = {
-            x: 160,
-            y: GROUND_Y - 50,
-            width: 32,
-            height: 50,
-            vy: 0,
-            isGrounded: false,
-            platformWidth: 150,
-            platformHeight: 10,
-            platformTilt: 0, 
-            maxTilt: 0.6,      
-            tiltSpeed: 0.04
-        };
-
-        const ball = {
-            localX: 0,         
-            radius: 10,
-            vx: 0,
-            parentYOffset: -28 
-        };
-
-        let obstacles = [];
-        let obstacleTimer = 0;
         const keys = {};
-
-        window.addEventListener("keydown", (e) => {
+        window.addEventListener('keydown', (e) => {
             keys[e.code] = true;
-            if (e.code === "Space" && player.isGrounded && !gameOver) {
-                player.vy = -12;
-                player.isGrounded = false;
+            if (e.code === 'Space' && isGrounded && !gameOver) {
+                playerVy = jumpForce;
+                isGrounded = false;
             }
-            if (e.code === "Space" && gameOver) {
+            if (e.code === 'Space' && gameOver) {
                 resetGame();
             }
         });
-
-        window.addEventListener("keyup", (e) => {
+        window.addEventListener('keyup', (e) => {
             keys[e.code] = false;
         });
 
-        restartBtn.addEventListener("click", resetGame);
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
+        // 6. Game Loop
         function resetGame() {
             cancelAnimationFrame(animationId);
+            
+            // Delete old platforms
+            platforms.forEach(p => scene.remove(p));
+            platforms.length = 0;
+            
+            generateInitialTrack();
+            player.position.set(0, 0.5, 0); // Reset player position
+            player.rotation.set(0, 0, 0);
+            
+            playerVy = 0;
             score = 0;
-            gameSpeed = 5;
+            speed = 0.35;
+            distanceTraveled = 0;
             gameOver = false;
-            obstacles = [];
-            obstacleTimer = 0;
             
-            player.y = GROUND_Y - 50;
-            player.vy = 0;
-            player.platformTilt = 0;
+            document.getElementById('scoreVal').innerText = score;
+            document.getElementById('game-over-screen').style.display = 'none';
             
-            ball.localX = 0;
-            ball.vx = 0;
-            
-            scoreVal.innerText = score;
-            gameOverScreen.classList.add("hidden");
             animate();
-        }
-
-        function spawnObstacle() {
-            const height = Math.random() * 25 + 25;
-            obstacles.push({
-                x: canvas.width,
-                y: GROUND_Y - height,
-                width: 24,
-                height: height
-            });
-        }
-
-        function handleGameOver() {
-            gameOver = true;
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem("balancer_high_score", highScore);
-                highScoreVal.innerText = highScore;
-            }
-            gameOverScreen.classList.remove("hidden");
         }
 
         function animate() {
             if (gameOver) return;
-
             animationId = requestAnimationFrame(animate);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Left/Right Movement (X-axis)
+            let moveX = 0;
+            if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 0.18;
+            if (keys['ArrowRight'] || keys['KeyD']) moveX += 0.18;
+            player.position.x += moveX;
+
+            // Constrain player to the edges of the track
+            const limit = 2.4 * laneWidth;
+            if (player.position.x > limit) player.position.x = limit;
+            if (player.position.x < -limit) player.position.x = -limit;
+
+            // Move the world towards the camera (Z-axis)
+            for (let i = platforms.length - 1; i >= 0; i--) {
+                const p = platforms[i];
+                p.position.z += speed;
+
+                // Remove tiles that have passed the camera
+                if (p.position.z > 15) {
+                    scene.remove(p);
+                    platforms.splice(i, 1);
+                }
+            }
+
+            // Spawn new tiles in the distance
+            distanceTraveled += speed;
+            if (distanceTraveled >= tileLength) {
+                distanceTraveled -= tileLength;
+                
+                let gapCount = 0;
+                for(let i = -2; i <= 2; i++) {
+                    if (Math.random() > 0.35) {
+                        createTile(i, -120);
+                    } else {
+                        gapCount++;
+                    }
+                }
+                if (gapCount === 5) createTile(Math.floor(Math.random() * 5) - 2, -120);
+            }
+
+            // Collision Detection (Checking if player is over a tile)
+            let onTrack = false;
+            // Only check for ground if falling
+            if (playerVy <= 0 && player.position.y >= 0.3 && player.position.y <= 0.8) {
+                for (const p of platforms) {
+                    const dx = Math.abs(p.position.x - player.position.x);
+                    const dz = Math.abs(p.position.z - player.position.z);
+                    
+                    // If within the bounds of a platform block
+                    if (dx < (laneWidth / 2 + 0.3) && dz < (tileLength / 2 + 0.3)) {
+                        onTrack = true;
+                        break;
+                    }
+                }
+            }
+
+            // Apply Gravity
+            if (onTrack) {
+                playerVy = 0;
+                player.position.y = 0.5; // Snap to top of the platform
+                isGrounded = true;
+            } else {
+                isGrounded = false;
+                playerVy += gravity;
+            }
+            player.position.y += playerVy;
+
+            // Add backflip animation when jumping for aesthetics
+            if (!isGrounded) {
+                player.rotation.x -= 0.1;
+            } else {
+                // Snap rotation back to flat when landed
+                player.rotation.x = 0; 
+                player.rotation.y = 0;
+            }
+
+            // Check Defeat Condition (Fell into the void)
+            if (player.position.y < -5) {
+                gameOver = true;
+                document.getElementById('game-over-screen').style.display = 'flex';
+            }
+
+            // Score and Difficulty Scaling
             score++;
-            scoreVal.innerText = score;
-            if (score % 600 === 0) gameSpeed += 0.6; 
-
-            ctx.fillStyle = "#161d2a";
-            ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y); 
-            ctx.strokeStyle = "#2d3542";
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(0, GROUND_Y);
-            ctx.lineTo(canvas.width, GROUND_Y);
-            ctx.stroke();
-
-            player.vy += GRAVITY;
-            player.y += player.vy;
-
-            if (player.y >= GROUND_Y - player.height) {
-                player.y = GROUND_Y - player.height;
-                player.vy = 0;
-                player.isGrounded = true;
+            if (score % 10 === 0) {
+                document.getElementById('scoreVal').innerText = Math.floor(score / 10);
             }
+            if (score % 500 === 0) speed += 0.02; // Slowly increase speed
 
-            if (keys["ArrowLeft"] || keys["KeyA"]) player.platformTilt -= player.tiltSpeed;
-            if (keys["ArrowRight"] || keys["KeyD"]) player.platformTilt += player.tiltSpeed;
-            
-            if (!keys["ArrowLeft"] && !keys["KeyA"] && !keys["ArrowRight"] && !keys["KeyD"]) {
-                player.platformTilt *= 0.88; 
-            }
-            player.platformTilt = Math.max(-player.maxTilt, Math.min(player.maxTilt, player.platformTilt));
-
-            ctx.fillStyle = "#00ff87"; 
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            ctx.save();
-            let platformCenterX = player.x + player.width / 2;
-            let platformCenterY = player.y; 
-            ctx.translate(platformCenterX, platformCenterY);
-            ctx.rotate(player.platformTilt);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(-player.platformWidth / 2, -player.platformHeight, player.platformWidth, player.platformHeight);
-            ctx.restore();
-
-            let ballAcceleration = 0.28 * Math.sin(player.platformTilt);
-            ball.vx += ballAcceleration;
-            ball.vx *= 0.97; 
-            ball.localX += ball.vx;
-
-            let globalBallX = platformCenterX + ball.localX * Math.cos(player.platformTilt) - ball.parentYOffset * Math.sin(player.platformTilt);
-            let globalBallY = platformCenterY + ball.localX * Math.sin(player.platformTilt) + ball.parentYOffset * Math.cos(player.platformTilt);
-
-            if (Math.abs(ball.localX) > player.platformWidth / 2 + ball.radius) {
-                handleGameOver();
-            }
-
-            ctx.beginPath();
-            ctx.arc(globalBallX, globalBallY - ball.radius, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = "#3a86ff";
-            ctx.fill();
-            ctx.closePath();
-
-            obstacleTimer++;
-            if (obstacleTimer > Math.max(50, 140 - gameSpeed * 4)) {
-                spawnObstacle();
-                obstacleTimer = 0;
-            }
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                obs.x -= gameSpeed;
-
-                ctx.fillStyle = "#ff0055";
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-
-                if (obs.x < player.x + player.width &&
-                    obs.x + obs.width > player.x &&
-                    obs.y < player.y + player.height &&
-                    obs.y + obs.height > player.y) {
-                        handleGameOver();
-                }
-
-                if (obs.x + obs.width < 0) {
-                    obstacles.splice(i, 1);
-                }
-            }
+            renderer.render(scene, camera);
         }
 
+        // Boot the game
+        generateInitialTrack();
         resetGame();
     </script>
 </body>

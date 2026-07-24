@@ -207,7 +207,7 @@
       </div>
 
       <div class="video-box">
-        <div class="video-box-title">Your Performance</div>
+        <div class="video-box-title">Your Performance (Ghost Overlay Active)</div>
         <video id="userVideo" class="video_element" playsinline muted></video>
         <canvas id="userCanvas" class="output_canvas" width="640" height="360"></canvas>
       </div>
@@ -244,7 +244,7 @@
     let positionHistory = {}; 
     let animationFrameId = null;
     let isProcessing = false;
-    let currentMasterLandmarks = null; // Stores master shape for comparison
+    let currentMasterLandmarks = null; 
 
     const refVideoInput = document.getElementById('refVideoInput');
     const userVideoInput = document.getElementById('userVideoInput');
@@ -275,6 +275,7 @@
     
     function goToProfile() {
       hideAllPages();
+      // If the inputs don't exist in the HTML, this is where the code silently crashes
       document.getElementById('display-name').innerText = document.getElementById('userName').value || "Dancer";
       document.getElementById('display-method').innerText = document.getElementById('danceMethod').value;
       document.getElementById('display-ref-status').innerText = refVideoInput.files.length > 0 ? "Uploaded ✅" : "None";
@@ -360,7 +361,6 @@
       document.getElementById('summary-page').style.display = 'flex';
     }
 
-    // --- MATH & DRAWING UTILS ---
     function calculateAngle(a, b, c) {
       if (!a || !b || !c) return 0;
       let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -382,22 +382,17 @@
       ctx.restore();
     }
 
-    // --- AI MODELS ---
-
     // 1. Reference Video Model (Draws Green Skeleton & Stores Geometry)
     const poseRef = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
     poseRef.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     poseRef.onResults((results) => {
       drawSkeleton(results, refCtx, refCanvas, '#4CAF50'); 
       if (results.poseLandmarks) {
-        currentMasterLandmarks = results.poseLandmarks; // Save for real-time comparison
+        currentMasterLandmarks = results.poseLandmarks; 
       }
     });
 
-    // 2. User Video Model (Draws Red Skeleton & Compares Shapes)
-    const poseUser = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-    poseUser.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-   // 2. User Video Model (Draws skeleton AND Compares Shapes Visually)
+    // 2. User Video Model (Draws skeleton AND Compares Shapes Visually)
     const poseUser = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
     poseUser.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     
@@ -429,15 +424,12 @@
       let currentFrameErrors = [];
 
       // --- DYNAMIC GEOMETRY COMPARISON ---
-      // Compare Left Knee Angles
       let masterLeftKneeAngle = calculateAngle(masterMarks[23], masterMarks[25], masterMarks[27]);
       let userLeftKneeAngle = calculateAngle(userMarks[23], userMarks[25], userMarks[27]);
       
-      // Compare Right Knee Angles
       let masterRightKneeAngle = calculateAngle(masterMarks[24], masterMarks[26], masterMarks[28]);
       let userRightKneeAngle = calculateAngle(userMarks[24], userMarks[26], userMarks[28]);
 
-      // Detect if user is matching the master's leg extension
       if (Math.abs(masterLeftKneeAngle - userLeftKneeAngle) > 20) {
         currentFrameErrors.push(`Left leg line differs from master (off by ~${Math.round(Math.abs(masterLeftKneeAngle - userLeftKneeAngle))}°).`);
       }
@@ -445,18 +437,15 @@
         currentFrameErrors.push(`Right leg line differs from master. Check your knee angle.`);
       }
 
-      // Compare Hip Level (Posture)
       let masterHipTilt = Math.abs(masterMarks[23].y - masterMarks[24].y);
       let userHipTilt = Math.abs(userMarks[23].y - userMarks[24].y);
       if (Math.abs(masterHipTilt - userHipTilt) > 0.05) {
         currentFrameErrors.push("Hip alignment mismatch. Keep your pelvis square to mirror the reference.");
       }
 
-      // Update Feedback
       detectedPositionBadge.innerText = "Real-Time Sync Check";
       feedbackText.innerText = "Tracking your geometry against the Master Video...";
 
-      // Log to history
       if (!positionHistory["Geometry Comparison"]) positionHistory["Geometry Comparison"] = new Set();
       currentFrameErrors.forEach(err => positionHistory["Geometry Comparison"].add(err));
 
@@ -466,3 +455,6 @@
         armFeedbackText.innerHTML = currentFrameErrors.map(e => `• ${e}`).join("<br>");
       }
     });
+  </script>
+</body>
+</html>

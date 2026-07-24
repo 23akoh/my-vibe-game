@@ -397,8 +397,29 @@
     // 2. User Video Model (Draws Red Skeleton & Compares Shapes)
     const poseUser = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
     poseUser.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+   // 2. User Video Model (Draws skeleton AND Compares Shapes Visually)
+    const poseUser = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+    poseUser.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    
     poseUser.onResults((results) => {
-      drawSkeleton(results, userCtx, userCanvas, '#ff4d4d'); 
+      userCtx.save();
+      userCtx.clearRect(0, 0, userCanvas.width, userCanvas.height);
+      
+      // --- VISUAL GHOST OVERLAY ---
+      // Draw the Master's skeleton on the User's canvas in semi-transparent green
+      if (currentMasterLandmarks && typeof POSE_CONNECTIONS !== 'undefined') {
+        drawConnectors(userCtx, currentMasterLandmarks, POSE_CONNECTIONS, {color: 'rgba(76, 175, 80, 0.4)', lineWidth: 6});
+      }
+
+      // Draw the User's skeleton on top in solid red/white
+      if (results.poseLandmarks) {
+        for (let i = 0; i <= 10; i++) results.poseLandmarks[i].visibility = 0; // Hide face clutter
+        if (typeof POSE_CONNECTIONS !== 'undefined') {
+          drawConnectors(userCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffffff', lineWidth: 3});
+        }
+        drawLandmarks(userCtx, results.poseLandmarks, {color: '#ff4d4d', lineWidth: 2, radius: 4});
+      }
+      userCtx.restore();
       
       if (!results.poseLandmarks || !currentMasterLandmarks) return;
 
@@ -406,7 +427,6 @@
       let masterMarks = currentMasterLandmarks;
 
       let currentFrameErrors = [];
-      let currentAction = "Comparing Lines...";
 
       // --- DYNAMIC GEOMETRY COMPARISON ---
       // Compare Left Knee Angles
@@ -419,7 +439,7 @@
 
       // Detect if user is matching the master's leg extension
       if (Math.abs(masterLeftKneeAngle - userLeftKneeAngle) > 20) {
-        currentFrameErrors.push(`Left leg line differs from master. Match their bend/extension (off by ~${Math.round(Math.abs(masterLeftKneeAngle - userLeftKneeAngle))}°).`);
+        currentFrameErrors.push(`Left leg line differs from master (off by ~${Math.round(Math.abs(masterLeftKneeAngle - userLeftKneeAngle))}°).`);
       }
       if (Math.abs(masterRightKneeAngle - userRightKneeAngle) > 20) {
         currentFrameErrors.push(`Right leg line differs from master. Check your knee angle.`);
@@ -446,6 +466,3 @@
         armFeedbackText.innerHTML = currentFrameErrors.map(e => `• ${e}`).join("<br>");
       }
     });
-  </script>
-</body>
-</html>
